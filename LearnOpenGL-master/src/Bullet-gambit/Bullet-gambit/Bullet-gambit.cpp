@@ -2,10 +2,10 @@
 #include <GLFW/glfw3.h>
 
 // Include Model header for 3D model loading
-#include <learnopengl/filesystem.h> 
+#include <learnopengl/filesystem.h> 
 #include <learnopengl/camera.h>
 #include <learnopengl/shader.h>
-#include <learnopengl/model.h> // NEW: Include Model class for loading .dae
+#include <learnopengl/model.h> // Include Model class for loading .dae
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -89,6 +89,10 @@ bool firstMouse = true;
 // Timing
 float deltaTime = 0.0f, lastFrame = 0.0f;
 
+// NEW: Variables for action delay/cooldown
+float lastActionTime = 0.0f;
+const float MIN_TURN_DELAY = 0.5f; // 0.5 seconds minimum delay between actions
+
 // Global Model Pointer
 Model* gunModel = nullptr; // Pointer to the loaded 3D gun model
 
@@ -107,7 +111,7 @@ std::string gameMessage = "Player 1's turn";
 enum ItemType { ITEM_NONE = 0, ITEM_ROLL = 1, ITEM_MOVE_BULLET = 2, ITEM_SKIP = 3 };
 std::vector<ItemType> player1Items;
 std::vector<ItemType> player2Items;
-bool skipNextTurn = false; // Flag set by ITEM_SKIP
+bool skipNextTurn = false; // Flag set by ITEM_SKIP (No longer used for ITEM_SKIP logic)
 GLFWwindow* g_window = nullptr;
 
 std::string itemName(ItemType type)
@@ -189,6 +193,7 @@ void startGameInit()
 	skipNextTurn = false;
 	player1Items.clear();
 	player2Items.clear();
+	lastActionTime = (float)glfwGetTime(); // Reset action timer
 
 	// MANDATORY: Start with only 1 item for each player
 	giveRandomItem(true);  // Player 1 gets 1 item
@@ -208,6 +213,8 @@ void useItem(bool forPlayer1, int slot)
 	ItemType item = items[slot];
 	items.erase(items.begin() + slot);
 
+	lastActionTime = (float)glfwGetTime(); // UPDATE ACTION TIMER
+
 	switch (item)
 	{
 	case ITEM_ROLL:
@@ -223,13 +230,15 @@ void useItem(bool forPlayer1, int slot)
 		std::cout << "Bullet moved forward one chamber (now at index " << currentChamber << ")." << std::endl;
 		break;
 	case ITEM_SKIP:
-		// MANDATORY: Set skip flag and immediately switch the turn to the opponent
-		skipNextTurn = true;
-		std::cout << "Turn skipped! Opponent takes the next action, but it will be skipped." << std::endl;
-
-		// Immediately switch player turn
+		// --- MODIFIED LOGIC ---
+		// User requested the SKIP item only skip the current turn, not the next one.
+		// Item use is treated as the turn-ending action, immediately passing the turn.
 		player1Turn = !player1Turn;
-		gameMessage = player1Turn ? "Player 1's turn (Skipped)" : "Player 2's turn (Skipped)";
+		gameMessage = player1Turn ? "Player 1's turn" : "Player 2's turn";
+		std::cout << (forPlayer1 ? "Player 1" : "Player 2") << " used SKIP. Turn immediately passes to the opponent." << std::endl;
+		// The old, confusing logic involving 'skipNextTurn' has been removed.
+
+		// FIX: Print the item state for the player whose turn it is now (the opponent).
 		printPlayerItems(player1Turn);
 
 		break;
@@ -244,18 +253,12 @@ void handleGameAction(int action)
 {
 	if (gameOver) return;
 
-	// Check if the current player's turn should be skipped due to an item
-	if (skipNextTurn)
-	{
-		skipNextTurn = false;
-		// Skip the action and pass the turn to the original player
-		player1Turn = !player1Turn;
-		gameMessage = player1Turn ? "Player 1's turn" : "Player 2's turn";
-		std::cout << "Turn was skipped due to an item. Turn passes normally to the next player." << std::endl;
-		printPlayerItems(player1Turn);
-		updateHUD();
-		return;
-	}
+	lastActionTime = (float)glfwGetTime(); // UPDATE ACTION TIMER
+
+	// The logic to check 'skipNextTurn' and skip the action has been removed here,
+	// as the ITEM_SKIP now handles the immediate turn switch in 'useItem()', 
+	// fulfilling the requirement to only skip the current player's action.
+	// if (skipNextTurn) { ... return; }
 
 	bool fired = chamber[currentChamber];
 	currentChamber = (currentChamber + 1) % 6; // Advance chamber after checking
@@ -325,6 +328,7 @@ unsigned int loadTexture(const char* path)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+		stbi_set_flip_vertically_on_load(true); // Ensure all future loads flip
 		stbi_image_free(data);
 	}
 	else
@@ -367,9 +371,6 @@ void renderQuad()
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	glBindVertexArray(0);
 }
-
-// REMOVED: renderCube() function and its global VAO/VBO variables are removed,
-// as we are now using the Model class for 3D rendering.
 
 // === Button Layout Configuration ===
 #define BUTTON_WIDTH_NORM (300.0f / SCR_WIDTH)
@@ -521,20 +522,20 @@ int main()
 	Shader newMenuShader("menu_2d.vs", "menu_2d.fs");
 	menuShader = &newMenuShader;
 
-	stbi_set_flip_vertically_on_load(true);
+
 
 	// === Load 3D Model: fullgun.dae ===
 	try {
-		// Path provided by user: "resources/objects/gun/fullgun.dae" resolved by FileSystem::getPath()
-		Model newGunModel(FileSystem::getPath("resources/objects/gun/fullgun.dae"));
-		gunModel = &newGunModel;
+		// FIX: Allocate the model on the heap using 'new' so it persists beyond the try block.
+		gunModel = new Model(FileSystem::getPath("resources/objects/gun/fullgun.dae"));
 		std::cout << "Successfully loaded gun model.\n";
 	}
 	catch (const std::exception& e) {
 		std::cerr << "Error loading gun model: " << e.what() << std::endl;
-		// The gun will not render if the model is missing, but the game continues.
+		// If loading fails, ensure the pointer is nullptr
+		gunModel = nullptr;
 	}
-
+	stbi_set_flip_vertically_on_load(true);
 	// === Load Textures ===
 	// Calls pass relative paths, loadTexture resolves them using FileSystem::getPath()
 	menuBackgroundTex = loadTexture("resources/textures/menu/menu.png");
@@ -595,6 +596,9 @@ int main()
 		}
 		else if (currentGameState == STATE_GAME)
 		{
+			// Determine if cooldown is active
+			bool inCooldown = ((float)glfwGetTime() - lastActionTime < MIN_TURN_DELAY);
+
 			// === 1. GAME RENDERING (3D) ===
 			glEnable(GL_DEPTH_TEST);
 			ourShader.use();
@@ -611,14 +615,14 @@ int main()
 				glm::mat4 model = glm::mat4(1.0f);
 
 				// Position the gun to be centered/visible
-				model = glm::translate(model, glm::vec3(0.0f, -0.5f, 0.0f));
+				model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
 
 				// Add rotation and spin
-				model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // Pitch to face forward
-				model = glm::rotate(model, (float)glfwGetTime() * glm::radians(20.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Yaw Spin
+				model = glm::rotate(model, glm::radians(135.0f), glm::vec3(-1.0f, 0.0f, 0.0f)); // Pitch to face forward
+				model = glm::rotate(model, (float)glfwGetTime() * glm::radians(20.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 
 				// Scale the model down
-				model = glm::scale(model, glm::vec3(0.015f));
+				model = glm::scale(model, glm::vec3(0.5f));
 
 				ourShader.setMat4("model", model);
 				gunModel->Draw(ourShader);
@@ -628,13 +632,23 @@ int main()
 			// === 2. DRAW GAME BUTTONS (2D Overlay) ===
 			glDisable(GL_DEPTH_TEST);
 			menuShader->use();
+
+			// Set the color for the dimming effect
+			glm::vec3 dimColor = glm::vec3(0.3f, 0.3f, 0.3f);
+			float dimFactor = inCooldown ? 0.5f : 1.0f; // Dim factor: 0.5 if cooldown, 1.0 otherwise
+
 			for (const auto& button : activeButtons)
 			{
 				if (button.isGameAction) {
+
+					// Apply dimming logic: blend the button's color with the dimming color
+					glm::vec3 finalColor = button.color * dimFactor + dimColor * (1.0f - dimFactor);
+
 					menuShader->setVec2("offset", button.position);
 					menuShader->setVec2("scale", button.size);
 					glBindTexture(GL_TEXTURE_2D, button.textureID);
-					menuShader->setVec3("color", button.color); // Use the button's specific color
+					// Set the color, which will blend with the texture based on the menu shader logic
+					menuShader->setVec3("color", finalColor);
 					renderQuad();
 				}
 			}
@@ -643,6 +657,12 @@ int main()
 
 		glfwSwapBuffers(g_window);
 		glfwPollEvents();
+	}
+
+	// Clean up the dynamically allocated gun model
+	if (gunModel) {
+		delete gunModel;
+		gunModel = nullptr;
 	}
 
 	glfwTerminate();
@@ -686,6 +706,9 @@ void processInput(GLFWwindow* window)
 		return;
 	}
 
+	// NEW: Check for minimum delay between actions (applies to item use)
+	if ((float)glfwGetTime() - lastActionTime < MIN_TURN_DELAY) return;
+
 	// 1-4 key uses item in slot 0-3
 	for (int i = 0; i < 4; ++i)
 		if (glfwGetKey(window, GLFW_KEY_1 + i) == GLFW_PRESS)
@@ -696,6 +719,9 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
 	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
 	{
+		// NEW: Only process mouse clicks if the minimum delay has passed
+		if (currentGameState == STATE_GAME && (float)glfwGetTime() - lastActionTime < MIN_TURN_DELAY) return;
+
 		double xpos, ypos;
 		glfwGetCursorPos(window, &xpos, &ypos);
 

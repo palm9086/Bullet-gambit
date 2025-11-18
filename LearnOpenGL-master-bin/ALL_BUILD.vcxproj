@@ -165,8 +165,6 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="C:\Users\User\Documents\GitHub\Bullet-gambit\LearnOpenGL-master-bin\ZERO_CHECK.vcxproj">
       <Project>{8A12881C-BF54-3D30-A1CD-EF0F4748E219}</Project>
       <Name>ZERO_CHECK</Name>
