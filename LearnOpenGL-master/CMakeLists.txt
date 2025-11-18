@@ -62,12 +62,11 @@ else()
 endif(WIN32)
 
 set(CHAPTERS
-    3.model_loading
+    Bullet-gambit
 )
 
-
-set(3.model_loading
-    1.model_loading
+set(Bullet-gambit
+    Bullet-gambit
 )
 
 

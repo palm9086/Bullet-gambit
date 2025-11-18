@@ -173,9 +173,9 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </ProjectReference>
-    <ProjectReference Include="C:\Users\User\Documents\GitHub\Bullet-gambit\LearnOpenGL-master-bin\3.model_loading__1.model_loading.vcxproj">
-      <Project>{40D74F28-6941-3F91-A95B-A0890875F5E0}</Project>
-      <Name>3.model_loading__1.model_loading</Name>
+    <ProjectReference Include="C:\Users\User\Documents\GitHub\Bullet-gambit\LearnOpenGL-master-bin\Bullet-gambit__Bullet-gambit.vcxproj">
+      <Project>{6D486A6A-89F5-3633-AD3F-A076E5DD2D97}</Project>
+      <Name>Bullet-gambit__Bullet-gambit</Name>
     </ProjectReference>
     <ProjectReference Include="C:\Users\User\Documents\GitHub\Bullet-gambit\LearnOpenGL-master-bin\GLAD.vcxproj">
       <Project>{A2F4C0BD-4D0E-39FD-A3E9-25D23FD61F1C}</Project>
