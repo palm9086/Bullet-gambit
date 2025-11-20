@@ -140,7 +140,8 @@ void updateHUD()
 			title += "[" + std::to_string(i + 1) + ":Empty] ";
 	}
 
-	title += "| L-Click: Shoot Opp | R-Click: Shoot Self | 1-4: Use Item | R: Restart";
+	// === MODIFIED: Removed misleading R-Click instruction, refers to buttons now ===
+	title += "| Action: Click Foe/Safe Buttons | 1-4: Use Item | R: Restart";
 	glfwSetWindowTitle(g_window, title.c_str());
 }
 
@@ -196,7 +197,7 @@ void startGameInit()
 	lastActionTime = (float)glfwGetTime(); // Reset action timer
 
 	// MANDATORY: Start with only 1 item for each player
-	giveRandomItem(true);  // Player 1 gets 1 item
+	giveRandomItem(true); // Player 1 gets 1 item
 	giveRandomItem(false); // Player 2 gets 1 item
 
 	gameMessage = "Player 1's turn";
@@ -231,12 +232,10 @@ void useItem(bool forPlayer1, int slot)
 		break;
 	case ITEM_SKIP:
 		// --- MODIFIED LOGIC ---
-		// User requested the SKIP item only skip the current turn, not the next one.
 		// Item use is treated as the turn-ending action, immediately passing the turn.
 		player1Turn = !player1Turn;
 		gameMessage = player1Turn ? "Player 1's turn" : "Player 2's turn";
 		std::cout << (forPlayer1 ? "Player 1" : "Player 2") << " used SKIP. Turn immediately passes to the opponent." << std::endl;
-		// The old, confusing logic involving 'skipNextTurn' has been removed.
 
 		// FIX: Print the item state for the player whose turn it is now (the opponent).
 		printPlayerItems(player1Turn);
@@ -254,11 +253,6 @@ void handleGameAction(int action)
 	if (gameOver) return;
 
 	lastActionTime = (float)glfwGetTime(); // UPDATE ACTION TIMER
-
-	// The logic to check 'skipNextTurn' and skip the action has been removed here,
-	// as the ITEM_SKIP now handles the immediate turn switch in 'useItem()', 
-	// fulfilling the requirement to only skip the current player's action.
-	// if (skipNextTurn) { ... return; }
 
 	bool fired = chamber[currentChamber];
 	currentChamber = (currentChamber + 1) % 6; // Advance chamber after checking
