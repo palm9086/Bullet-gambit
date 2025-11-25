@@ -39,7 +39,7 @@
               "RelativeDocumentMoniker": "..\\LearnOpenGL-master\\src\\Bullet-gambit\\Bullet-gambit\\Bullet-gambit.cpp",
               "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\Bullet-gambit\\LearnOpenGL-master\\src\\Bullet-gambit\\Bullet-gambit\\Bullet-gambit.cpp",
               "RelativeToolTip": "..\\LearnOpenGL-master\\src\\Bullet-gambit\\Bullet-gambit\\Bullet-gambit.cpp",
-              "ViewState": "AgIAAIEBAAAAAAAAAAAAAIoBAAADAAAAAAAAAA==",
+              "ViewState": "AgIAALECAAAAAAAAAAAUwLwCAAAnAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-11-17T15:58:43.372Z",
               "EditorCaption": ""
@@ -52,7 +52,7 @@
               "RelativeDocumentMoniker": "..\\LearnOpenGL-master\\src\\Bullet-gambit\\Bullet-gambit\\menu_2d.vs",
               "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\Bullet-gambit\\LearnOpenGL-master\\src\\Bullet-gambit\\Bullet-gambit\\menu_2d.vs",
               "RelativeToolTip": "..\\LearnOpenGL-master\\src\\Bullet-gambit\\Bullet-gambit\\menu_2d.vs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
               "WhenOpened": "2025-11-18T05:38:09.964Z",
               "EditorCaption": ""
@@ -67,7 +67,8 @@
               "RelativeToolTip": "..\\LearnOpenGL-master\\src\\Bullet-gambit\\Bullet-gambit\\menu_2d.fs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-11-18T05:38:08.076Z"
+              "WhenOpened": "2025-11-18T05:38:08.076Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -77,9 +78,10 @@
               "RelativeDocumentMoniker": "..\\LearnOpenGL-master\\src\\Bullet-gambit\\Bullet-gambit\\Bullet-gambit.vs",
               "ToolTip": "C:\\Users\\User\\Documents\\GitHub\\Bullet-gambit\\LearnOpenGL-master\\src\\Bullet-gambit\\Bullet-gambit\\Bullet-gambit.vs",
               "RelativeToolTip": "..\\LearnOpenGL-master\\src\\Bullet-gambit\\Bullet-gambit\\Bullet-gambit.vs",
-              "ViewState": "AgIAACEAAAAAAAAAAAAYwEAAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAACAAAAAAAAAAAAAIwEAAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-11-18T05:38:07.515Z"
+              "WhenOpened": "2025-11-18T05:38:07.515Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -91,7 +93,8 @@
               "RelativeToolTip": "..\\LearnOpenGL-master\\src\\Bullet-gambit\\Bullet-gambit\\Bullet-gambit.fs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-11-18T05:38:06.828Z"
+              "WhenOpened": "2025-11-18T05:38:06.828Z",
+              "EditorCaption": ""
             }
           ]
         }

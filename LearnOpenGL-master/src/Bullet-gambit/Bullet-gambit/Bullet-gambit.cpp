@@ -34,16 +34,16 @@ struct MenuButton {
 	bool isGameAction = false;
 	int actionCode = 0;
 	glm::vec3 color;
+	bool isItemSlot = false;
 };
 
 // --- Global Variables ---
 const unsigned int SCR_WIDTH = 1600;
 const unsigned int SCR_HEIGHT = 900;
 const float MIN_TURN_DELAY = 0.5f;
-// Duration for short effects (Click.png, Got.png)
 const float STATUS_IMAGE_DURATION = 0.5f;
-// Duration for Player Turn Indicator visibility before auto-skip
 const float TURN_SKIP_DURATION = 2.0f;
+const float GAME_OVER_TRANSITION_DELAY = 5.0f; // Transition delay is kept, but now skippable
 
 // Textures
 unsigned int menuBackgroundTex = 0;
@@ -55,6 +55,13 @@ unsigned int player1GotTex = 0, player2GotTex = 0;
 unsigned int player1WonTex = 0, player2WonTex = 0;
 unsigned int clickTex = 0;
 
+// NEW TEXTURES
+unsigned int backButtonTex = 0;
+unsigned int descriptionButtonTex = 0;
+unsigned int itemDescriptionPanelTex = 0;
+unsigned int slot1Tex = 0, slot2Tex = 0, slot3Tex = 0, slot4Tex = 0;
+
+
 std::vector<MenuButton> activeButtons;
 unsigned int quadVAO = 0;
 Shader* menuShader = nullptr;
@@ -64,7 +71,19 @@ bool firstMouse = true;
 float deltaTime = 0.0f, lastFrame = 0.0f;
 float lastActionTime = 0.0f;
 Model* gunModel = nullptr;
+
+// --- UPDATED MODEL POINTERS ---
+Model* itemModelRoll = nullptr;
+Model* itemModelSkip = nullptr;
+Model* itemModelMove = nullptr;
+// --- END UPDATED MODEL POINTERS ---
+
 GLFWwindow* g_window = nullptr;
+
+// GUN ROTATION VARIABLES (REMOVED - Rotation logic now fully removed)
+// float gunRotationZ = 0.0f;           
+// float targetGunRotationZ = 0.0f;     
+// float rotationSpeed = 500.0f;        
 
 // Game Data
 bool player1Turn = true;
@@ -74,8 +93,10 @@ int currentChamber = 0;
 std::string gameMessage = "Player 1's turn";
 float statusImageTime = 0.0f;
 unsigned int currentStatusTex = 0;
-// Flag to manage immediate hiding of the turn indicator when clicked
 bool turnIndicatorSkippedManually = false;
+
+// NEW UI State
+bool showItemDescription = false;
 
 // Item System
 enum ItemType { ITEM_NONE = 0, ITEM_ROLL = 1, ITEM_MOVE_BULLET = 2, ITEM_SKIP = 3 };
@@ -88,7 +109,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void processInput(GLFWwindow* window);
-void renderQuad();
+void renderQuad(float texVStart = 0.0f, float texVEnd = 1.0f);
 unsigned int loadTexture(const char* path);
 void setupMainMenu();
 void setupStartSubMenu();
@@ -98,11 +119,46 @@ void startGameInit();
 void updateHUD();
 void giveRandomItem(bool forPlayer1);
 void useItem(bool forPlayer1, int slot);
+void getItemUVs(ItemType type, float& vStart, float& vEnd);
 int randomInt(int min, int max) { return min + rand() % (max - min + 1); }
+
+// --- New Model Validation Helper ---
+Model* loadAndValidateModel(const std::string& path, const std::string& name) {
+	try {
+		Model* model = new Model(FileSystem::getPath(path));
+		// Assuming a successful model load means it has meshes. The Model class 
+		// usually includes a `meshes.size()` check during its own construction, 
+		// but checking here ensures our pointer is safe to use.
+		// Since we don't have access to the internal `Model` class definition,
+		// we'll rely on the exception mechanism built into the `Model` constructor.
+
+		// If the model constructor didn't throw, we assume it's valid enough for now.
+		// A more robust check would look at `model->meshes.size()`.
+
+		std::cout << "SUCCESS: Loaded model '" << name << "' from " << path << std::endl;
+		return model;
+	}
+	catch (const std::exception& e) {
+		std::cerr << "FAILURE: Model '" << name << "' failed to load from " << path << std::endl;
+		std::cerr << "         Error: " << e.what() << std::endl;
+		std::cerr << "         ACTION: This model will not be rendered (Access Violation 0xc0000005 averted)." << std::endl;
+		return nullptr;
+	}
+}
+// --- End New Model Validation Helper ---
+
 
 // --- Helper for turn indicator status ---
 bool isPlayerTurnIndicator(unsigned int texID) {
 	return texID == player1Tex || texID == player2Tex;
+}
+
+// ADDED: Helper for game over status images (Got or Won)
+bool isGameOverStatusIndicator(unsigned int texID) {
+	return texID == player1GotTex ||
+		texID == player2GotTex ||
+		texID == player1WonTex ||
+		texID == player2WonTex;
 }
 
 // --- Item Helpers ---
@@ -116,6 +172,24 @@ std::string itemName(ItemType type)
 	default: return "Empty";
 	}
 }
+
+void getItemUVs(ItemType type, float& vStart, float& vEnd)
+{
+	// UV ranges (Bottom to Top): Skip (0.0-0.25), Roll (0.25-0.50), Move (0.50-0.75), Empty (0.75-1.0)
+	switch (type)
+	{
+	case ITEM_NONE:
+		vStart = 0.75f; vEnd = 1.0f; break;
+	case ITEM_MOVE_BULLET:
+		vStart = 0.50f; vEnd = 0.75f; break;
+	case ITEM_ROLL:
+		vStart = 0.25f; vEnd = 0.50f; break;
+	case ITEM_SKIP:
+	default:
+		vStart = 0.0f; vEnd = 0.25f; break;
+	}
+}
+
 
 // --- Game Logic Functions ---
 void updateHUD()
@@ -200,29 +274,48 @@ void startGameInit()
 	player1Items.clear();
 	player2Items.clear();
 	lastActionTime = (float)glfwGetTime();
-	turnIndicatorSkippedManually = false; // Reset the flag
+	turnIndicatorSkippedManually = false;
+	showItemDescription = false;
+
+	// Reset gun rotation (Rotation variables removed)
+	// gunRotationZ = 0.0f;
+	// targetGunRotationZ = 0.0f;
 
 	giveRandomItem(true);
 	giveRandomItem(false);
 
 	gameMessage = "Player 1's turn";
-	currentStatusTex = player1Tex; // Start with the click-to-proceed indicator
+	currentStatusTex = player1Tex;
 	statusImageTime = (float)glfwGetTime();
 	updateHUD();
 }
 
+// MODIFIED: Rotation logic removed
 void handleGameAction(int action)
 {
 	if (gameOver) return;
 
 	lastActionTime = (float)glfwGetTime();
 	statusImageTime = (float)glfwGetTime();
-	turnIndicatorSkippedManually = false; // Reset the flag
+	turnIndicatorSkippedManually = false;
 
 	bool fired = chamber[currentChamber];
 	currentChamber = (currentChamber + 1) % 6;
 	bool turnSwitched = false;
 
+	// 1. Instant Rotation to the target for visual feedback of the shot (REMOVED)
+	// if (action == 1) // Shoot Opponent (Foe button)
+	// {
+	//     targetGunRotationZ = 0.0f; 
+	//     gunRotationZ = 0.0f; 
+	// }
+	// else if (action == 2) // Shoot Self (Safe button)
+	// {
+	//     targetGunRotationZ = 180.0f; 
+	//     gunRotationZ = 180.0f;
+	// }
+
+	// 2. Resolve the shot
 	if (action == 1) // Shoot Opponent (Foe button)
 	{
 		if (fired)
@@ -233,7 +326,7 @@ void handleGameAction(int action)
 		}
 		else
 		{
-			currentStatusTex = clickTex; // Click.png feedback (0.5s)
+			currentStatusTex = clickTex;
 			player1Turn = !player1Turn;
 			gameMessage = player1Turn ? "Player 1's turn" : "Player 2's turn";
 			turnSwitched = true;
@@ -249,7 +342,7 @@ void handleGameAction(int action)
 		}
 		else
 		{
-			currentStatusTex = clickTex; // Click.png feedback (0.5s)
+			currentStatusTex = clickTex;
 			giveRandomItem(player1Turn);
 			player1Turn = !player1Turn;
 			gameMessage = player1Turn ? "Player 1's turn" : "Player 2's turn";
@@ -257,12 +350,11 @@ void handleGameAction(int action)
 		}
 	}
 
-	// After a successful action/turn switch (which means fired was false), set the next indicator 
-	// to appear after the short Click.png effect finishes.
-	if (turnSwitched) {
-		// We rely on the Click.png to clear itself after STATUS_IMAGE_DURATION (0.5s).
-		// The main loop will then check currentStatusTex == 0.
-	}
+	// 3. After resolution (if turn switched or game over), instantly reset the rotation to the Foe/Neutral state (0 degrees). (REMOVED)
+	// if (turnSwitched || gameOver) {
+	//     gunRotationZ = 0.0f;
+	//     targetGunRotationZ = 0.0f;
+	// }
 
 	updateHUD();
 }
@@ -300,11 +392,13 @@ unsigned int loadTexture(const char* path)
 	return textureID;
 }
 
-void renderQuad()
+// Modified renderQuad to support sub-texture rendering (for the item slots)
+void renderQuad(float texVStart, float texVEnd)
 {
 	if (quadVAO == 0)
 	{
 		float quadVertices[] = {
+			// Pos (x, y, z)          // TexCoords (u, v)
 			-1.0f,	1.0f, 0.0f, 0.0f, 1.0f,
 			-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
 			 1.0f,	1.0f, 0.0f, 1.0f, 1.0f,
@@ -313,7 +407,9 @@ void renderQuad()
 		unsigned int quadVBO;
 		glGenVertexArrays(1, &quadVAO);
 		glGenBuffers(1, &quadVBO);
+
 		glBindVertexArray(quadVAO);
+
 		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
 		glEnableVertexAttribArray(0);
@@ -321,6 +417,14 @@ void renderQuad()
 		glEnableVertexAttribArray(1);
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 	}
+
+	// Set the uniforms for the texture coordinates in the menu shader
+	if (menuShader) {
+		menuShader->use();
+		menuShader->setFloat("vStart", texVStart);
+		menuShader->setFloat("vEnd", texVEnd);
+	}
+
 	glBindVertexArray(quadVAO);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	glBindVertexArray(0);
@@ -332,6 +436,7 @@ void renderQuad()
 #define MARGIN_X (0.05f)
 #define MARGIN_Y (0.05f)
 #define BUTTON_SPACING (BUTTON_HEIGHT_NORM + 0.03f)
+#define ITEM_SLOT_SIZE_NORM (120.0f / SCR_HEIGHT)
 
 void setupMainMenu() {
 	activeButtons.clear();
@@ -356,13 +461,39 @@ void setupGameButtons() {
 	activeButtons.clear();
 	float btnW = BUTTON_WIDTH_NORM * 1.2f;
 	float btnH = BUTTON_HEIGHT_NORM * 1.2f;
-	float H_SPACING = 0.25f;
+
+	// 1. Increased Horizontal Spacing for Foe/Safe buttons (Now 0.50f)
+	float H_SPACING = 0.50f;
 	float TotalWidth = btnW * 2.0f + H_SPACING;
+
+	// 1. Foe/Safe buttons (Center of the scene)
 	float startX = (1.0f - TotalWidth) / 2.0f;
-	float btnY = MARGIN_Y + 0.1f;
+	float btnY = (1.0f - btnH) / 2.0f; // Center Y
 
 	activeButtons.push_back({ foeButtonTex, glm::vec2(startX, btnY), glm::vec2(btnW, btnH), STATE_GAME, true, 1, glm::vec3(0.8f, 0.2f, 0.2f) });
 	activeButtons.push_back({ safeButtonTex, glm::vec2(startX + btnW + H_SPACING, btnY), glm::vec2(btnW, btnH), STATE_GAME, true, 2, glm::vec3(0.2f, 0.8f, 0.2f) });
+
+	// 2. New UI Buttons (Top Left/Right)
+	activeButtons.push_back({ backButtonTex, glm::vec2(MARGIN_X, 1.0f - MARGIN_Y - BUTTON_HEIGHT_NORM * 0.5f), glm::vec2(BUTTON_WIDTH_NORM * 0.5f, BUTTON_HEIGHT_NORM * 0.5f), STATE_MENU, false, 3, glm::vec3(1.0f, 1.0f, 1.0f) });
+	activeButtons.push_back({ descriptionButtonTex, glm::vec2(1.0f - MARGIN_X - BUTTON_WIDTH_NORM * 0.5f, 1.0f - MARGIN_Y - BUTTON_HEIGHT_NORM * 0.5f), glm::vec2(BUTTON_WIDTH_NORM * 0.5f, BUTTON_HEIGHT_NORM * 0.5f), STATE_GAME, false, 4, glm::vec3(1.0f, 1.0f, 1.0f) });
+
+	// 3. Item Slot Buttons (Bottom of the scene)
+	// Horizontal spacing between items is ITEM_SLOT_SIZE_NORM * 1.2f.
+	float ITEM_SPACING = ITEM_SLOT_SIZE_NORM * 1.2f;
+	float itemXBase = (1.0f - ITEM_SLOT_SIZE_NORM * 4.0f) / 2.0f - ITEM_SLOT_SIZE_NORM * 0.2f;
+	float itemY = MARGIN_Y; // Bottom
+	for (int i = 0; i < 4; ++i) {
+		activeButtons.push_back({
+			(i == 0 ? slot1Tex : (i == 1 ? slot2Tex : (i == 2 ? slot3Tex : slot4Tex))),
+			glm::vec2(itemXBase + (float)i * ITEM_SPACING, itemY), // Use ITEM_SPACING here
+			glm::vec2(ITEM_SLOT_SIZE_NORM, ITEM_SLOT_SIZE_NORM),
+			STATE_GAME,
+			false,
+			10 + i,
+			glm::vec3(1.0f, 1.0f, 1.0f),
+			true
+			});
+	}
 }
 
 // ====================================================
@@ -395,13 +526,26 @@ int main()
 	Shader newMenuShader("menu_2d.vs", "menu_2d.fs");
 	menuShader = &newMenuShader;
 
-	try {
-		gunModel = new Model(FileSystem::getPath("resources/objects/gun/fullgun.dae"));
-	}
-	catch (const std::exception& e) {
-		std::cerr << "Error loading gun model: " << e.what() << std::endl;
-		gunModel = nullptr;
-	}
+	// -------------------------------------------------------------------
+	// --- RESTORED MODEL LOADING PATHS ---
+	// -------------------------------------------------------------------
+
+	// 1. Load Main Gun Model
+	gunModel = loadAndValidateModel("resources/objects/gun/fullgun.dae", "Gun Model");
+
+	// 2. Load Roll Item Model (Restored to Bread)
+	itemModelRoll = loadAndValidateModel("resources/objects/bread/bread.dae", "Roll Item Model (Bread)");
+
+	// 3. Load Skip Item Model (Restored to Uno/Untitled.dae, assuming it is available now)
+	itemModelSkip = loadAndValidateModel("resources/objects/uno/Untitled.dae", "Skip Item Model (Uno Card)");
+
+	// 4. Load Move Item Model (Restored to Watch)
+	itemModelMove = loadAndValidateModel("resources/objects/watch/Untitled.dae", "Move Item Model (Watch)");
+
+	// -------------------------------------------------------------------
+	// --- END RESTORED MODEL LOADING ------------------------------------
+	// -------------------------------------------------------------------
+
 
 	// Load Textures
 	menuBackgroundTex = loadTexture("resources/textures/menu/menu.png");
@@ -421,6 +565,17 @@ int main()
 	player2WonTex = loadTexture("resources/textures/menu/Player2Won.png");
 	clickTex = loadTexture("resources/textures/menu/Click.png");
 
+	// --- Load NEW Textures ---
+	backButtonTex = loadTexture("resources/textures/menu/Back.png");
+	descriptionButtonTex = loadTexture("resources/textures/menu/Description.png");
+	itemDescriptionPanelTex = loadTexture("resources/textures/menu/item description.png");
+	slot1Tex = loadTexture("resources/textures/menu/slot1.png");
+	slot2Tex = loadTexture("resources/textures/menu/slot2.png");
+	slot3Tex = loadTexture("resources/textures/menu/slot3.png");
+	slot4Tex = loadTexture("resources/textures/menu/slot4.png");
+	// --- End NEW Textures ---
+
+
 	setupMainMenu();
 
 	// --- Game Loop ---
@@ -437,23 +592,25 @@ int main()
 
 		if (currentGameState == STATE_MENU || currentGameState == STATE_SUBMENU_START)
 		{
-			// Menu Rendering (Unchanged)
+			// Menu Rendering
 			glDisable(GL_DEPTH_TEST);
-			menuShader->use();
-			menuShader->setFloat("alpha", 1.0f);
+			if (menuShader) menuShader->use();
+			if (menuShader) menuShader->setFloat("alpha", 1.0f);
+			if (menuShader) menuShader->setFloat("vStart", 0.0f); // Default to full texture
+			if (menuShader) menuShader->setFloat("vEnd", 1.0f);   // Default to full texture
 
 			glBindTexture(GL_TEXTURE_2D, menuBackgroundTex);
-			menuShader->setVec2("offset", glm::vec2(0.0f, 0.0f));
-			menuShader->setVec2("scale", glm::vec2(1.0f, 1.0f));
-			menuShader->setVec3("color", glm::vec3(0.0f, 0.0f, 0.1f));
+			if (menuShader) menuShader->setVec2("offset", glm::vec2(0.0f, 0.0f));
+			if (menuShader) menuShader->setVec2("scale", glm::vec2(1.0f, 1.0f));
+			if (menuShader) menuShader->setVec3("color", glm::vec3(0.0f, 0.0f, 0.1f));
 			renderQuad();
 
 			for (const auto& button : activeButtons)
 			{
-				menuShader->setVec2("offset", button.position);
-				menuShader->setVec2("scale", button.size);
+				if (menuShader) menuShader->setVec2("offset", button.position);
+				if (menuShader) menuShader->setVec2("scale", button.size);
 				glBindTexture(GL_TEXTURE_2D, button.textureID);
-				menuShader->setVec3("color", button.color);
+				if (menuShader) menuShader->setVec3("color", button.color);
 				renderQuad();
 			}
 		}
@@ -467,128 +624,304 @@ int main()
 		{
 			bool inCooldown = ((float)glfwGetTime() - lastActionTime < MIN_TURN_DELAY);
 
-			// 3D Rendering (Unchanged)
+			// 3D Rendering (Gun Model)
 			glEnable(GL_DEPTH_TEST);
-			ourShader.use();
-			glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
-			glm::mat4 view = camera.GetViewMatrix();
-			ourShader.setMat4("projection", projection);
-			ourShader.setMat4("view", view);
 
-			if (gunModel)
-			{
-				glm::mat4 model = glm::mat4(1.0f);
-				model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-				model = glm::rotate(model, glm::radians(135.0f), glm::vec3(-1.0f, 0.0f, 0.0f));
-				model = glm::rotate(model, (float)glfwGetTime() * glm::radians(20.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-				model = glm::scale(model, glm::vec3(0.5f));
-				ourShader.setMat4("model", model);
-				gunModel->Draw(ourShader);
+			// CRITICAL CHECK: Ensure shader is valid before using it
+			if (ourShader.ID == 0) {
+				// Skip 3D rendering if the main shader is invalid
+				std::cerr << "Warning: Main shader is invalid. Skipping 3D rendering." << std::endl;
 			}
+			else {
+
+				ourShader.use();
+				glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
+				glm::mat4 view = camera.GetViewMatrix();
+				ourShader.setMat4("projection", projection);
+				ourShader.setMat4("view", view);
+
+				if (gunModel)
+				{
+					// compute target world point from mouse ray intersecting z=0 plane
+					glm::vec3 rayOrigin = camera.Position;
+					// normalized device coords
+					float mx = lastX / (float)SCR_WIDTH;
+					float my = lastY / (float)SCR_HEIGHT;
+					float ndcX = mx *2.0f -1.0f;
+					float ndcY = my *2.0f -1.0f;
+
+					glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT,0.1f,1000.0f);
+					glm::mat4 view = camera.GetViewMatrix();
+					glm::mat4 invProj = glm::inverse(projection);
+					glm::mat4 invView = glm::inverse(view);
+
+					// Ray in clip space
+					glm::vec4 rayClip(ndcX, ndcY, -1.0f,1.0f);
+					// Eye space
+					glm::vec4 rayEye = invProj * rayClip;
+					rayEye.z = -1.0f; rayEye.w =0.0f;
+					// World space direction
+					glm::vec4 rayWorld4 = invView * rayEye;
+					glm::vec3 rayDir = glm::normalize(glm::vec3(rayWorld4));
+
+					glm::vec3 targetWorld = glm::vec3(0.0f);
+					if (fabs(rayDir.z) >1e-6f) {
+						float t = -rayOrigin.z / rayDir.z; // intersect with z=0 plane
+						if (t >0.0f) targetWorld = rayOrigin + rayDir * t;
+						else targetWorld = rayOrigin + rayDir *5.0f; // fallback
+					} else {
+						// ray parallel to plane - fallback to point far along ray
+						targetWorld = rayOrigin + rayDir *5.0f;
+					}
+
+					// Build orientation so that model's local +X axis points toward targetWorld
+					glm::vec3 gunPos = glm::vec3(0.0f);
+					glm::vec3 dir = glm::normalize(targetWorld - gunPos);
+					// avoid degenerate
+					if (glm::length(dir) <1e-6f) dir = glm::vec3(1.0f,0.0f,0.0f);
+
+					glm::vec3 up(0.0f,1.0f,0.0f);
+					// We want the gun's LEFT side to point toward the target. Assume model's +X is right,
+					// so use -dir as the X axis to make the left side face the target.
+					glm::vec3 xAxis = -dir; // left side follows target
+					glm::vec3 zAxis = glm::normalize(glm::cross(xAxis, up));
+					glm::vec3 yAxis = glm::normalize(glm::cross(zAxis, xAxis));
+					// Preserve prior vertical inversion if applied
+					yAxis = -yAxis;
+
+					glm::mat4 orient(1.0f);
+					orient[0] = glm::vec4(xAxis,0.0f);
+					orient[1] = glm::vec4(yAxis,0.0f);
+					orient[2] = glm::vec4(zAxis,0.0f);
+
+					// Apply base model rotation that was previously used (camera orientation)
+					glm::mat4 baseRot = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
+
+					// Compose final model matrix: translate -> orient -> baseRot -> scale
+					glm::mat4 model = glm::mat4(1.0f);
+					model = glm::translate(model, gunPos);
+					model = model * orient * baseRot;
+					model = glm::scale(model, glm::vec3(0.5f));
+					ourShader.setMat4("model", model);
+					gunModel->Draw(ourShader);
+				}
+
+				// --- ITEM MODEL RENDERING WITH CUSTOM SCALING AND TRANSLATION ---
+				auto& currentItems = player1Turn ? player1Items : player2Items;
+
+				// Re-calculate Item Slot Positions using the globally defined constants/macros
+				float ITEM_SPACING = ITEM_SLOT_SIZE_NORM *1.2f;
+				float itemXBase = (1.0f - ITEM_SLOT_SIZE_NORM *4.0f) /2.0f - ITEM_SLOT_SIZE_NORM *0.2f;
+				// Use the TOP position of the item slot so models sit at the top-middle of the button
+				float itemY_top_norm = MARGIN_Y + ITEM_SLOT_SIZE_NORM; // top edge of slot
+
+				// World coordinate mapping (approximate)
+				float worldX_scale =10.0f;
+				float worldY_scale = worldX_scale * ((float)SCR_HEIGHT / (float)SCR_WIDTH);
+				float itemModelHeight =1.0f;
+
+				for (int i =0; i < (int)currentItems.size(); ++i) {
+					ItemType type = currentItems[i];
+					Model* modelToDraw = nullptr;
+
+					// Assign model pointer based on type.
+					if (type == ITEM_ROLL) modelToDraw = itemModelRoll;
+					else if (type == ITEM_SKIP) modelToDraw = itemModelSkip;
+					else if (type == ITEM_MOVE_BULLET) modelToDraw = itemModelMove;
+
+					if (modelToDraw) { // SAFE CHECK: Only draw if the model pointer is valid (not nullptr).
+						float normX_center = itemXBase + (float)i * ITEM_SPACING + ITEM_SLOT_SIZE_NORM /2.0f;
+
+						// Convert normalized screen position to3D world space using TOP-middle of the slot
+						float worldX = (normX_center -0.5f) * worldX_scale;
+						float worldY = (itemY_top_norm -0.5f) * worldY_scale + itemModelHeight;
+						float worldZ = -0.5f;
+
+						glm::mat4 model = glm::mat4(1.0f);
+						model = glm::translate(model, glm::vec3(worldX, worldY, worldZ));
+
+						// Specific scaling and rotation adjustments for each model
+						float scale =1.0f;
+
+						if (type == ITEM_ROLL) {
+							// Roll Object: scaled for visibility
+							scale =0.04f;
+							// orient upright
+							model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f,0.0f,0.0f));
+							// Keep roll's rotation but spin around Z axis (bread special case)
+							model = glm::rotate(model, (float)glfwGetTime() * glm::radians(90.0f), glm::vec3(0.0f,0.0f,1.0f));
+						}
+						else if (type == ITEM_SKIP) {
+							// Skip Object: small scale and spin in Y axis
+							scale =0.005f;
+							model = glm::rotate(model, (float)glfwGetTime() * glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f));
+						}
+						else if (type == ITEM_MOVE_BULLET) {
+							// Move Object: larger scale and spin in Y axis
+							scale =5.0f;
+							model = glm::rotate(model, (float)glfwGetTime() * glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f));
+						}
+
+						model = glm::scale(model, glm::vec3(scale));
+						// No additional translation offset - item sits at top-middle of the UI button
+
+						ourShader.setMat4("model", model);
+						modelToDraw->Draw(ourShader);
+					}
+				}
+				// --- END ITEM MODEL RENDERING ---
+			} // End shader check
+
 
 			// 2D UI Rendering
 			glDisable(GL_DEPTH_TEST);
-			menuShader->use();
+			if (menuShader) menuShader->use();
 			glActiveTexture(GL_TEXTURE0);
-			menuShader->setInt("image", 0);
+			if (menuShader) menuShader->setInt("image", 0);
+			if (menuShader) menuShader->setFloat("vStart", 0.0f);
+			if (menuShader) menuShader->setFloat("vEnd", 1.0f);
+
 
 			// Status Image Logic (Turn indicator/Shot effect)
 			float elapsed = (float)glfwGetTime() - statusImageTime;
 			float alpha = 1.0f;
-			bool showActionUI = true;
+
+			// UNIFIED ACTION UI VISIBILITY: Hide if a primary status image is displayed
+			bool showActionUI = currentStatusTex != player1GotTex && currentStatusTex != player2GotTex && currentStatusTex != player1WonTex && currentStatusTex != player2WonTex;
+
+			// Special case: If turn indicator is on, hide the buttons
+			if (isPlayerTurnIndicator(currentStatusTex)) {
+				showActionUI = false;
+			}
 
 			// 1. Handle Game Over Transition: Shot -> Winner
 			if (gameOver) {
-				// If showing 'Got', transition to 'Won' after 0.5s
-				if (elapsed > STATUS_IMAGE_DURATION && (currentStatusTex == player1GotTex || currentStatusTex == player2GotTex)) {
+				// The explicit 5.0s delay is bypassed by the click logic below
+				if (elapsed > GAME_OVER_TRANSITION_DELAY && (currentStatusTex == player1GotTex || currentStatusTex == player2GotTex)) {
 					currentStatusTex = (currentStatusTex == player1GotTex) ? player2WonTex : player1WonTex;
 				}
-
-				// Always hide action buttons when Game Over is active
-				if (currentStatusTex != 0) showActionUI = false;
 			}
 			// 2. Handle Non-Game-Over Status Effects
 			else if (currentStatusTex != 0) {
 
-				// Player Turn Indicator (Player1.png/Player2.png): Hide on click OR after 2.0s
+				// Player Turn Indicator: Hide on click OR after 2.0s
 				if (isPlayerTurnIndicator(currentStatusTex)) {
-					showActionUI = false; // Hide buttons if turn indicator is showing
-
-					// Auto-skip logic after 2.0 seconds
 					if (elapsed > TURN_SKIP_DURATION) {
-						currentStatusTex = 0; // Clear it after 2.0s, allows buttons to show
+						currentStatusTex = 0;
+						showActionUI = true; // Show actions when indicator disappears
 					}
 				}
-				// Click feedback (Click.png): Hide after duration (0.5s)
+				// Click feedback: Hide after duration (0.5s)
 				else if (currentStatusTex == clickTex) {
 					if (elapsed > STATUS_IMAGE_DURATION) {
-						currentStatusTex = 0; // Hide image after 0.5s
-
-						// FIX: When Click.png clears naturally, it means a turn just switched.
-						// We MUST set the next turn indicator here, otherwise the action buttons 
-						// will flash briefly before the indicator is supposed to come up.
+						currentStatusTex = 0;
 						currentStatusTex = player1Turn ? player1Tex : player2Tex;
 						statusImageTime = (float)glfwGetTime();
-						showActionUI = false; // The next indicator is now showing.
-
+						showActionUI = false;
 					}
 					else {
-						showActionUI = false; // Image showing, hide buttons
+						showActionUI = false;
 					}
 				}
 			}
 
-			// 3. Manual Skip Handling (Removed the auto-restore logic)
-			// The only logic here is to ensure action buttons are displayed after a manual skip.
+			// 3. Manual Skip Handling
 			if (currentStatusTex == 0 && !gameOver) {
-
 				if (turnIndicatorSkippedManually) {
-					// Scenario: Player just clicked to dismiss PlayerX.png.
-					// Reset the flag and ensure action buttons are visible. DO NOT set currentStatusTex.
 					turnIndicatorSkippedManually = false;
 					showActionUI = true;
 				}
-				// If currentStatusTex is 0, and not a manual skip, buttons are already set to show.
 			}
-
 
 			// Draw Status Image
 			if (currentStatusTex != 0)
 			{
-				// Click effect fade out
 				if (currentStatusTex == clickTex && elapsed > 0.0f) {
 					alpha = 1.0f - std::min(1.0f, elapsed / STATUS_IMAGE_DURATION);
 				}
 
-				menuShader->setVec2("offset", glm::vec2(0.0f, 0.0f));
-				menuShader->setVec2("scale", glm::vec2(1.0f, 1.0f));
+				if (menuShader) menuShader->setVec2("offset", glm::vec2(0.0f, 0.0f));
+				if (menuShader) menuShader->setVec2("scale", glm::vec2(1.0f, 1.0f));
 				glBindTexture(GL_TEXTURE_2D, currentStatusTex);
-				menuShader->setVec3("color", glm::vec3(1.0f, 1.0f, 1.0f));
-				menuShader->setFloat("alpha", alpha);
+				if (menuShader) menuShader->setVec3("color", glm::vec3(1.0f, 1.0f, 1.0f));
+				if (menuShader) menuShader->setFloat("alpha", alpha);
 				renderQuad();
 			}
 
-			// Draw Foe/Safe Action Buttons
-			menuShader->setFloat("alpha", 1.0f);
+			// Draw all 2D UI elements
+			if (menuShader) menuShader->setFloat("alpha", 1.0f);
 
-			if (showActionUI && !gameOver)
+			for (const auto& button : activeButtons)
 			{
-				for (const auto& button : activeButtons)
-				{
-					if (button.isGameAction) {
-						glm::vec3 finalColor = button.color;
-						if (inCooldown) {
+				bool showButton = false;
+				glm::vec3 finalColor = button.color;
+
+				// Show the button if it's part of the action phase AND showActionUI is true
+				if (button.isGameAction || button.actionCode == 3 || button.actionCode == 4 || button.isItemSlot) {
+					showButton = showActionUI;
+				}
+				else if (currentGameState == STATE_GAME) {
+					// All other buttons (menu, etc.) are hidden during game
+					showButton = false;
+				}
+
+
+				if (showButton) {
+					if (button.isGameAction || button.isItemSlot) {
+						if (inCooldown || gameOver) {
+							finalColor = finalColor * 0.5f + glm::vec3(0.3f, 0.3f, 0.3f) * 0.5f;
+						}
+					}
+
+					if (menuShader) menuShader->setVec2("offset", button.position);
+					if (menuShader) menuShader->setVec2("scale", button.size);
+					glBindTexture(GL_TEXTURE_2D, button.textureID);
+					if (menuShader) menuShader->setVec3("color", finalColor);
+
+					// Handle Item Slot Textures and Cooldowns
+					if (button.isItemSlot && currentGameState == STATE_GAME) {
+						int slotIndex = button.actionCode - 10;
+						auto& items = player1Turn ? player1Items : player2Items;
+
+						ItemType itemType = ITEM_NONE;
+						if (slotIndex >= 0 && slotIndex < (int)items.size()) {
+							itemType = items[slotIndex];
+						}
+						else {
+							// Empty slots are dimmed
 							finalColor = finalColor * 0.5f + glm::vec3(0.3f, 0.3f, 0.3f) * 0.5f;
 						}
 
-						menuShader->setVec2("offset", button.position);
-						menuShader->setVec2("scale", button.size);
-						glBindTexture(GL_TEXTURE_2D, button.textureID);
-						menuShader->setVec3("color", finalColor);
+						if (menuShader) menuShader->setVec3("color", finalColor);
+
+						float vStart, vEnd;
+						getItemUVs(itemType, vStart, vEnd);
+						renderQuad(vStart, vEnd);
+					}
+					else {
+						// Render normal buttons (Foe, Safe, Back, Description)
 						renderQuad();
 					}
 				}
 			}
+
+			// Draw Item Description Panel (if active)
+			if (showItemDescription) {
+				// Convert 600x640 pixels to normalized screen space
+				float panelW_Norm = 600.0f / SCR_WIDTH;
+				float panelH_Norm = 640.0f / SCR_HEIGHT;
+
+				// Center the panel
+				float panelX = (1.0f - panelW_Norm) / 2.0f;
+				float panelY = (1.0f - panelH_Norm) / 2.0f;
+
+				if (menuShader) menuShader->setVec2("offset", glm::vec2(panelX, panelY));
+				if (menuShader) menuShader->setVec2("scale", glm::vec2(panelW_Norm, panelH_Norm));
+				glBindTexture(GL_TEXTURE_2D, itemDescriptionPanelTex);
+				if (menuShader) menuShader->setVec3("color", glm::vec3(1.0f, 1.0f, 1.0f));
+				renderQuad();
+			}
+
 			glEnable(GL_DEPTH_TEST);
 		}
 
@@ -596,7 +929,13 @@ int main()
 		glfwPollEvents();
 	}
 
-	if (gunModel) delete gunModel;
+	// --- FIXED MODEL DELETION: Use explicit braces and set to nullptr ---
+	if (gunModel) { delete gunModel; gunModel = nullptr; }
+	if (itemModelRoll) { delete itemModelRoll; itemModelRoll = nullptr; }
+	if (itemModelSkip) { delete itemModelSkip; itemModelSkip = nullptr; }
+	if (itemModelMove) { delete itemModelMove; itemModelMove = nullptr; }
+	// --- END FIXED MODEL DELETION ---
+
 	glfwTerminate();
 	return 0;
 }
@@ -632,12 +971,16 @@ void processInput(GLFWwindow* window)
 		return;
 	}
 
-	// Item use input
+	// Item use input (Keyboard 1-4)
 	if ((float)glfwGetTime() - lastActionTime < MIN_TURN_DELAY) return;
 
-	for (int i = 0; i < 4; ++i)
-		if (glfwGetKey(window, GLFW_KEY_1 + i) == GLFW_PRESS)
+	for (int i = 0; i < 4; ++i) {
+		if (glfwGetKey(window, GLFW_KEY_1 + i) == GLFW_PRESS) {
 			useItem(player1Turn, i);
+			lastActionTime = (float)glfwGetTime();
+			break;
+		}
+	}
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
@@ -663,20 +1006,45 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 			{
 				buttonClicked = true;
 
-				if (btn.isGameAction) {
-					if (isPlayerTurnIndicator(currentStatusTex) && currentGameState == STATE_GAME) {
-						// The click was on a button, but the indicator is up. Ignore the action/click.
-						return;
-					}
+				// Check for visibility logic for actions, utility, and items
+				bool canAct = !(isPlayerTurnIndicator(currentStatusTex) && currentGameState == STATE_GAME);
 
-					if (currentGameState == STATE_GAME && (float)glfwGetTime() - lastActionTime < MIN_TURN_DELAY) {
+				// Handle Game Actions (Foe/Safe)
+				if (btn.isGameAction) {
+					if (currentGameState == STATE_GAME && ((float)glfwGetTime() - lastActionTime < MIN_TURN_DELAY || gameOver || !canAct)) {
 						return;
 					}
 					if (!gameOver) handleGameAction(btn.actionCode);
 					return;
 				}
 
-				// Menu button handling (Unchanged)
+				// Handle Item Slot Buttons (Action codes 10-13)
+				if (btn.isItemSlot && currentGameState == STATE_GAME) {
+					if (gameOver || (float)glfwGetTime() - lastActionTime < MIN_TURN_DELAY || !canAct) {
+						return;
+					}
+					int slotIndex = btn.actionCode - 10;
+					useItem(player1Turn, slotIndex);
+					lastActionTime = (float)glfwGetTime();
+					return;
+				}
+
+				// Handle Description Button Toggle (Action code 4)
+				if (btn.actionCode == 4 && currentGameState == STATE_GAME && canAct) {
+					showItemDescription = !showItemDescription;
+					return;
+				}
+
+				// Handle Back Button (Action code 3)
+				if (btn.actionCode == 3 && currentGameState == STATE_GAME && canAct) {
+					currentGameState = STATE_MENU;
+					setupMainMenu();
+					return;
+				}
+
+				// --- Menu Buttons (always clickable if visible) ---
+
+				// Menu button handling
 				if (btn.nextState == (GameState)-1) {
 					glfwSetWindowShouldClose(window, true);
 					return;
@@ -699,14 +1067,31 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 			}
 		}
 
-		// ** Click to Skip Player Turn Indicator **
+		// Click to Skip Player Turn Indicator
 		if (!buttonClicked && currentGameState == STATE_GAME)
 		{
 			if (isPlayerTurnIndicator(currentStatusTex))
 			{
 				currentStatusTex = 0;
-				// Set the skip flag, telling the main loop NOT to immediately restore PlayerX.png
 				turnIndicatorSkippedManually = true;
+			}
+			// ADDED: Allow skipping of 'Got Shot' status to jump to 'Victory' scene or clear 'Victory' scene.
+			else if (isGameOverStatusIndicator(currentStatusTex))
+			{
+				// If currently on a 'Got' screen, transition immediately to the 'Won' screen.
+				if (currentStatusTex == player1GotTex) {
+					currentStatusTex = player2WonTex; // P1 Got -> P2 Won
+				}
+				else if (currentStatusTex == player2GotTex) {
+					currentStatusTex = player1WonTex; // P2 Got -> P1 Won
+				}
+				else {
+					// If already on a 'Won' screen, clear the status image.
+					currentStatusTex = 0;
+				}
+				statusImageTime = 0.0f; // Reset timer to ensure other time-based logic is bypassed
+				turnIndicatorSkippedManually = true;
+				return;
 			}
 		}
 	}
