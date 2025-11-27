@@ -1,5 +1,0 @@
-C:/Users/User/Documents/GitHub/Bullet-gambit/LearnOpenGL-master-bin/CMakeFiles/STB_IMAGE.dir
-C:/Users/User/Documents/GitHub/Bullet-gambit/LearnOpenGL-master-bin/CMakeFiles/GLAD.dir
-C:/Users/User/Documents/GitHub/Bullet-gambit/LearnOpenGL-master-bin/CMakeFiles/Bullet-gambit__Bullet-gambit.dir
-C:/Users/User/Documents/GitHub/Bullet-gambit/LearnOpenGL-master-bin/CMakeFiles/ALL_BUILD.dir
-C:/Users/User/Documents/GitHub/Bullet-gambit/LearnOpenGL-master-bin/CMakeFiles/ZERO_CHECK.dir
