@@ -396,18 +396,54 @@ void renderQuad(float texVStart, float texVEnd)
 
 void setupMainMenu() {
 	activeButtons.clear();
-	activeButtons.push_back({ quitButtonTex, glm::vec2(MARGIN_X, MARGIN_Y), glm::vec2(BUTTON_WIDTH_NORM, BUTTON_HEIGHT_NORM), (GameState)-1, false, 0, glm::vec3(0.8f, 0.2f, 0.2f) });
-	activeButtons.push_back({ creditButtonTex, glm::vec2(MARGIN_X, MARGIN_Y + BUTTON_SPACING), glm::vec2(BUTTON_WIDTH_NORM, BUTTON_HEIGHT_NORM), STATE_CREDITS, false, 0, glm::vec3(0.2f, 0.4f, 0.8f) });
-	activeButtons.push_back({ startButtonTex, glm::vec2(MARGIN_X, MARGIN_Y + 2.0f * BUTTON_SPACING), glm::vec2(BUTTON_WIDTH_NORM, BUTTON_HEIGHT_NORM), STATE_SUBMENU_START, false, 0, glm::vec3(0.2f, 0.8f, 0.2f) });
+
+	// --- MODIFIED: Calculate centered positions ---
+	float buttonW = BUTTON_WIDTH_NORM;
+	float buttonH = BUTTON_HEIGHT_NORM;
+	float spacing = BUTTON_SPACING;
+
+	// Center X for all buttons
+	float centerX = (1.0f - buttonW) / 2.0f;
+
+	// Total height of the stack from Quit base to Start top
+	// Stack: Quit (Y), Credit (Y + SPACING), Start (Y + 2*SPACING)
+	// Total height is (Start_Y + H) - Quit_Y = 2 * SPACING + H
+	float TSH = 2.0f * spacing + buttonH;
+
+	// Base Y position (Quit button's Y) to vertically center the stack
+	float startY = 0.3f - (TSH / 2.0f);
+	// --- END MODIFIED ---
+
+	// Quit Button (Bottom of the centered stack)
+	activeButtons.push_back({ quitButtonTex, glm::vec2(centerX, startY), glm::vec2(buttonW, buttonH), (GameState)-1, false, 0, glm::vec3(0.8f, 0.2f, 0.2f) });
+	// Credit Button (Middle of the centered stack)
+	activeButtons.push_back({ creditButtonTex, glm::vec2(centerX, startY + spacing), glm::vec2(buttonW, buttonH), STATE_CREDITS, false, 0, glm::vec3(0.2f, 0.4f, 0.8f) });
+	// Start Button (Top of the centered stack)
+	activeButtons.push_back({ startButtonTex, glm::vec2(centerX, startY + 2.0f * spacing), glm::vec2(buttonW, buttonH), STATE_SUBMENU_START, false, 0, glm::vec3(0.2f, 0.8f, 0.2f) });
 }
 
 void setupStartSubMenu() {
 	setupMainMenu();
-	float startButtonBaseY = MARGIN_Y + 2.0f * BUTTON_SPACING;
-	float subButtonX = MARGIN_X + BUTTON_WIDTH_NORM + 0.02f;
-	float subButtonWidth = BUTTON_WIDTH_NORM * 0.6f;
-	float subButtonHeight = BUTTON_HEIGHT_NORM * 0.6f;
-	float subButtonVOffset = (BUTTON_HEIGHT_NORM - subButtonHeight) / 2.0f;
+
+	// --- MODIFIED: Recalculate centered start button position ---
+	float buttonW = BUTTON_WIDTH_NORM;
+	float spacing = BUTTON_SPACING;
+	float buttonH = BUTTON_HEIGHT_NORM;
+
+	float centerX = (1.0f - buttonW) / 2.0f;
+	float TSH = 2.0f * spacing + buttonH;
+	float startY = 0.3f - (TSH / 2.0f);
+
+	float startButtonBaseY = startY + 2.0f * spacing; // New Centered Start Button Y
+	float startButtonBaseX = centerX; // New Centered Start Button X
+	// --- END MODIFIED ---
+
+	// Sub-buttons placed relative to the new centered Start button
+	float subButtonX = startButtonBaseX + buttonW + 0.02f; // Right of the Start button
+	float subButtonWidth = buttonW * 0.6f;
+	float subButtonHeight = buttonH * 0.6f;
+	float subButtonVOffset = (buttonH - subButtonHeight) / 2.0f; // Vertical alignment offset
+
 	activeButtons.push_back({ twoPlayerButtonTex, glm::vec2(subButtonX, startButtonBaseY + subButtonVOffset), glm::vec2(subButtonWidth, subButtonHeight), STATE_GAME, false, 0, glm::vec3(0.2f, 0.7f, 0.7f) });
 	activeButtons.push_back({ botButtonTex, glm::vec2(subButtonX + subButtonWidth + 0.01f, startButtonBaseY + subButtonVOffset), glm::vec2(subButtonWidth, subButtonHeight), STATE_SUBMENU_START, false, 0, glm::vec3(0.5f, 0.5f, 0.5f) });
 }
@@ -1079,6 +1115,11 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 						}
 						else if (currentGameState == STATE_MENU) {
 							setupMainMenu();
+						}
+						else if (currentGameState == STATE_CREDITS) {
+							activeButtons.clear(); // Clear buttons for the blank credits screen
+							// Add back button for credits screen
+							activeButtons.push_back({ backButtonTex, glm::vec2(MARGIN_X, MARGIN_Y), glm::vec2(BUTTON_WIDTH_NORM * 0.5f, BUTTON_HEIGHT_NORM * 0.5f), STATE_MENU, false, 3, glm::vec3(1.0f, 1.0f, 1.0f) });
 						}
 					}
 					return;
