@@ -4,6 +4,7 @@
 #include <learnopengl/camera.h>
 #include <learnopengl/shader.h>
 #include <learnopengl/model.h>
+#include <unordered_map>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -62,6 +63,9 @@ unsigned int itemDescriptionPanelTex = 0;
 unsigned int slot1Tex = 0, slot2Tex = 0, slot3Tex = 0, slot4Tex = 0;
 // NEW: Restart Button Texture ID
 unsigned int restartButtonTex = 0;
+
+// Store texture pixel sizes to preserve aspect ratios
+std::unordered_map<unsigned int, glm::vec2> textureSizes;
 
 std::vector<MenuButton> activeButtons;
 unsigned int quadVAO = 0;
@@ -219,22 +223,19 @@ void useItem(bool forPlayer1, int slot)
 		break;
 	case ITEM_MOVE_BULLET:
 		currentChamber = (currentChamber + 1) % 6;
-		std::cout << "Bullet moved forward one chamber (now at index " << currentChamber << ")."
-			<< std::endl;
+		std::cout << "Bullet moved forward one chamber (now at index " << currentChamber << ")." << std::endl;
 		break;
 	case ITEM_SKIP:
 		player1Turn = !player1Turn;
 		gameMessage = player1Turn ? "Player 1's turn" : "Player 2's turn";
-		std::cout << (forPlayer1 ? "Player 1" : "Player 2") << " used SKIP. Turn immediately passes to the opponent."
-			<< std::endl;
+		std::cout << (forPlayer1 ? "Player 1" : "Player 2") << " used SKIP. Turn immediately passes to the opponent." << std::endl;
 		break;
 	default: break;
 	}
 
 	// Set turn indicator if SKIP item was used
 	if (item == ITEM_SKIP) {
-		currentStatusTex = player1Turn ?
-			player1Tex : player2Tex;
+		currentStatusTex = player1Turn ? player1Tex : player2Tex;
 		statusImageTime = (float)glfwGetTime();
 	}
 
@@ -280,8 +281,7 @@ void handleGameAction(int action)
 	{
 		if (fired)
 		{
-			currentStatusTex = player1Turn ?
-				player2GotTex : player1GotTex;
+			currentStatusTex = player1Turn ? player2GotTex : player1GotTex;
 			gameMessage = player1Turn ? "P1 shot P2 - P1 Wins!" : "P2 shot P1 - P2 Wins!";
 			gameOver = true;
 		}
@@ -335,6 +335,8 @@ unsigned int loadTexture(const char* path)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		// Store pixel size so UI can preserve aspect ratio
+		textureSizes[textureID] = glm::vec2((float)width, (float)height);
 		stbi_image_free(data);
 	}
 	else
@@ -343,6 +345,8 @@ unsigned int loadTexture(const char* path)
 		unsigned char fallbackData[] = { 255, 255, 255, 255 };
 		glBindTexture(GL_TEXTURE_2D, textureID);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, fallbackData);
+		// fallback size 1x1
+		textureSizes[textureID] = glm::vec2(1.0f, 1.0f);
 	}
 	return textureID;
 }
@@ -391,83 +395,109 @@ void renderQuad(float texVStart, float texVEnd)
 #define BUTTON_HEIGHT_NORM (100.0f / SCR_HEIGHT)
 #define MARGIN_X (0.05f)
 #define MARGIN_Y (0.05f)
-#define BUTTON_SPACING (BUTTON_HEIGHT_NORM + 0.03f)
+#define BUTTON_SPACING (BUTTON_HEIGHT_NORM + 0.01f)
 #define ITEM_SLOT_SIZE_NORM (120.0f / SCR_HEIGHT)
+
+// Helper: return normalized size (width,height) for a texture ID using stored pixel sizes
+static glm::vec2 getNormalizedSize(unsigned int texID)
+{
+	auto it = textureSizes.find(texID);
+	if (it != textureSizes.end()) {
+		float w = it->second.x / (float)SCR_WIDTH;
+		float h = it->second.y / (float)SCR_HEIGHT;
+		return glm::vec2(w, h);
+	}
+	// fallback
+	return glm::vec2(BUTTON_WIDTH_NORM, BUTTON_HEIGHT_NORM);
+}
 
 void setupMainMenu() {
 	activeButtons.clear();
 
-	// --- MODIFIED: Calculate centered positions ---
-	float buttonW = BUTTON_WIDTH_NORM;
-	float buttonH = BUTTON_HEIGHT_NORM;
-	float spacing = BUTTON_SPACING;
+	// Get normalized sizes for each menu texture (use actual image sizes)
+	glm::vec2 quitSize = getNormalizedSize(quitButtonTex);
+	glm::vec2 creditSize = getNormalizedSize(creditButtonTex);
+	glm::vec2 startSize = getNormalizedSize(startButtonTex);
 
-	// Center X for all buttons
-	float centerX = (1.0f - buttonW) / 2.0f;
+	// spacing between stacked buttons (normalized)
+	float gap = 0.05f;
 
-	// Total height of the stack from Quit base to Start top
-	// Stack: Quit (Y), Credit (Y + SPACING), Start (Y + 2*SPACING)
-	// Total height is (Start_Y + H) - Quit_Y = 2 * SPACING + H
-	float TSH = 2.0f * spacing + buttonH;
+	// Compute total stack height (quit at bottom -> credit -> start at top)
+	float totalHeight = quitSize.y + gap + creditSize.y + gap + startSize.y;
 
-	// Base Y position (Quit button's Y) to vertically center the stack
-	float startY = 0.3f - (TSH / 2.0f);
-	// --- END MODIFIED ---
+	// Base Y position to vertically center the stack (slightly above center) -- keep previous offset of 0.25f
+	float baseY = 0.3f - (totalHeight / 2.0f);
 
-	// Quit Button (Bottom of the centered stack)
-	activeButtons.push_back({ quitButtonTex, glm::vec2(centerX, startY), glm::vec2(buttonW, buttonH), (GameState)-1, false, 0, glm::vec3(0.8f, 0.2f, 0.2f) });
-	// Credit Button (Middle of the centered stack)
-	activeButtons.push_back({ creditButtonTex, glm::vec2(centerX, startY + spacing), glm::vec2(buttonW, buttonH), STATE_CREDITS, false, 0, glm::vec3(0.2f, 0.4f, 0.8f) });
-	// Start Button (Top of the centered stack)
-	activeButtons.push_back({ startButtonTex, glm::vec2(centerX, startY + 2.0f * spacing), glm::vec2(buttonW, buttonH), STATE_SUBMENU_START, false, 0, glm::vec3(0.2f, 0.8f, 0.2f) });
+	// Center X per button based on its own width
+	float quitX = (1.0f - quitSize.x) / 2.0f;
+	float creditX = (1.0f - creditSize.x) / 2.0f;
+	float startX = (1.0f - startSize.x) / 2.0f;
+
+	// Positions
+	float quitY = baseY;
+	float creditY = quitY + quitSize.y + gap;
+	float startY = creditY + creditSize.y + gap;
+
+	// Push buttons using texture-based sizes
+	activeButtons.push_back({ quitButtonTex, glm::vec2(quitX, quitY), quitSize, (GameState)-1, false, 0, glm::vec3(0.8f, 0.2f, 0.2f) });
+	activeButtons.push_back({ creditButtonTex, glm::vec2(creditX, creditY), creditSize, STATE_CREDITS, false, 0, glm::vec3(0.2f, 0.4f, 0.8f) });
+	activeButtons.push_back({ startButtonTex, glm::vec2(startX, startY), startSize, STATE_SUBMENU_START, false, 0, glm::vec3(0.2f, 0.8f, 0.2f) });
 }
 
 void setupStartSubMenu() {
+	// Build main menu first (start button will have correct size/position)
 	setupMainMenu();
 
-	// --- MODIFIED: Recalculate centered start button position ---
-	float buttonW = BUTTON_WIDTH_NORM;
-	float spacing = BUTTON_SPACING;
-	float buttonH = BUTTON_HEIGHT_NORM;
+	// Find the start button we just added to position sub-buttons relative to it
+	glm::vec2 startPos(0.0f);
+	glm::vec2 startSize(BUTTON_WIDTH_NORM, BUTTON_HEIGHT_NORM);
+	for (const auto& b : activeButtons) {
+		if (b.textureID == startButtonTex) {
+			startPos = b.position;
+			startSize = b.size;
+			break;
+		}
+	}
 
-	float centerX = (1.0f - buttonW) / 2.0f;
-	float TSH = 2.0f * spacing + buttonH;
-	float startY = 0.3f - (TSH / 2.0f);
+	// Get sizes for sub-buttons from their textures
+	glm::vec2 twoSize = getNormalizedSize(twoPlayerButtonTex);
+	glm::vec2 botSize = getNormalizedSize(botButtonTex);
 
-	float startButtonBaseY = startY + 2.0f * spacing; // New Centered Start Button Y
-	float startButtonBaseX = centerX; // New Centered Start Button X
-	// --- END MODIFIED ---
+	// Place sub-buttons to the right of start button with small gap, align vertically centered to start
+	float gap = 0.02f;
+	float subX = startPos.x + startSize.x + gap;
+	float twoY = startPos.y + (startSize.y - twoSize.y) / 2.0f;
+	float botY = startPos.y + (startSize.y - botSize.y) / 2.0f;
 
-	// Sub-buttons placed relative to the new centered Start button
-	float subButtonX = startButtonBaseX + buttonW + 0.02f; // Right of the Start button
-	float subButtonWidth = buttonW * 0.6f;
-	float subButtonHeight = buttonH * 0.6f;
-	float subButtonVOffset = (buttonH - subButtonHeight) / 2.0f; // Vertical alignment offset
-
-	activeButtons.push_back({ twoPlayerButtonTex, glm::vec2(subButtonX, startButtonBaseY + subButtonVOffset), glm::vec2(subButtonWidth, subButtonHeight), STATE_GAME, false, 0, glm::vec3(0.2f, 0.7f, 0.7f) });
-	activeButtons.push_back({ botButtonTex, glm::vec2(subButtonX + subButtonWidth + 0.01f, startButtonBaseY + subButtonVOffset), glm::vec2(subButtonWidth, subButtonHeight), STATE_SUBMENU_START, false, 0, glm::vec3(0.5f, 0.5f, 0.5f) });
+	activeButtons.push_back({ twoPlayerButtonTex, glm::vec2(subX, twoY), twoSize, STATE_GAME, false, 0, glm::vec3(0.2f, 0.7f, 0.7f) });
+	activeButtons.push_back({ botButtonTex, glm::vec2(subX + twoSize.x + 0.01f, botY), botSize, STATE_SUBMENU_START, false, 0, glm::vec3(0.5f, 0.5f, 0.5f) });
 }
 
 void setupGameButtons() {
 	activeButtons.clear();
-	float btnW = BUTTON_WIDTH_NORM * 1.2f;
-	float btnH = BUTTON_HEIGHT_NORM * 1.2f;
-	// 1. Increased Horizontal Spacing for Foe/Safe buttons (Now 0.50f)
-	float H_SPACING = 0.50f;
-	float TotalWidth = btnW * 2.0f + H_SPACING;
 
-	// 1. Foe/Safe buttons (Center of the scene)
-	float startX = (1.0f - TotalWidth) / 2.0f;
-	float btnY = (1.0f - btnH) / 2.0f; // Center Y
+	// Use actual image sizes for Safe and Foe buttons
+	glm::vec2 safeSize = getNormalizedSize(safeButtonTex);
+	glm::vec2 foeSize = getNormalizedSize(foeButtonTex);
 
-	// MODIFIED: SWAPPED SAFE (Action 2) and FOE (Action 1) positions
-	activeButtons.push_back({ safeButtonTex, glm::vec2(startX, btnY), glm::vec2(btnW, btnH), STATE_GAME, true, 2, glm::vec3(0.2f, 0.8f, 0.2f) });
-	activeButtons.push_back({ foeButtonTex, glm::vec2(startX + btnW + H_SPACING, btnY), glm::vec2(btnW, btnH), STATE_GAME, true, 1, glm::vec3(0.8f, 0.2f, 0.2f) });
-	// 2. New UI Buttons (Top Left/Right)
-	activeButtons.push_back({ backButtonTex, glm::vec2(MARGIN_X, 1.0f - MARGIN_Y - BUTTON_HEIGHT_NORM * 0.5f), glm::vec2(BUTTON_WIDTH_NORM * 0.5f, BUTTON_HEIGHT_NORM * 0.5f), STATE_MENU, false, 3, glm::vec3(1.0f, 1.0f, 1.0f) });
-	activeButtons.push_back({ descriptionButtonTex, glm::vec2(1.0f - MARGIN_X - BUTTON_WIDTH_NORM * 0.5f, 1.0f - MARGIN_Y - BUTTON_HEIGHT_NORM * 0.5f), glm::vec2(BUTTON_WIDTH_NORM * 0.5f, BUTTON_HEIGHT_NORM * 0.5f), STATE_GAME, false, 4, glm::vec3(1.0f, 1.0f, 1.0f) });
-	// 3. Item Slot Buttons (Bottom of the scene)
-	// Horizontal spacing between items is ITEM_SLOT_SIZE_NORM * 1.2f.
+	float H_SPACING = 0.05f; // horizontal gap between action buttons
+	float totalWidth = safeSize.x + H_SPACING + foeSize.x;
+
+	float startX = (1.0f - totalWidth) / 2.0f;
+	float maxH = std::max(safeSize.y, foeSize.y);
+	float btnY = (1.0f - maxH) / 2.0f; // vertical center based on tallest
+
+	activeButtons.push_back({ safeButtonTex, glm::vec2(startX, btnY + (maxH - safeSize.y)/2.0f), safeSize, STATE_GAME, true, 2, glm::vec3(0.2f, 0.8f, 0.2f) });
+	activeButtons.push_back({ foeButtonTex, glm::vec2(startX + safeSize.x + H_SPACING, btnY + (maxH - foeSize.y)/2.0f), foeSize, STATE_GAME, true, 1, glm::vec3(0.8f, 0.2f, 0.2f) });
+
+	// Top-left/back and top-right/description should use their texture sizes
+	glm::vec2 backSize = getNormalizedSize(backButtonTex);
+	glm::vec2 descSize = getNormalizedSize(descriptionButtonTex);
+
+	activeButtons.push_back({ backButtonTex, glm::vec2(MARGIN_X, 1.0f - MARGIN_Y - backSize.y), backSize, STATE_MENU, false, 3, glm::vec3(1.0f, 1.0f, 1.0f) });
+	activeButtons.push_back({ descriptionButtonTex, glm::vec2(1.0f - MARGIN_X - descSize.x, 1.0f - MARGIN_Y - descSize.y), descSize, STATE_GAME, false, 4, glm::vec3(1.0f, 1.0f, 1.0f) });
+
+	// 3. Item Slot Buttons (Bottom of the scene) keep existing logic
 	float ITEM_SPACING = ITEM_SLOT_SIZE_NORM * 1.2f;
 	float itemXBase = (1.0f - ITEM_SLOT_SIZE_NORM * 4.0f) / 2.0f - ITEM_SLOT_SIZE_NORM * 0.2f;
 	float itemY = MARGIN_Y; // Bottom
@@ -1098,6 +1128,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 					}
 				}
 				// --- END NEW: Visibility Check ---
+
 
 				// Handle Menu Transitions (Non-Action/Utility Buttons)
 				if (!btn.isGameAction && !btn.isItemSlot && btn.actionCode < 3) {
