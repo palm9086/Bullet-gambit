@@ -741,7 +741,7 @@ int main()
 							worldY = -1.0f;
 						}
 						else if (type == ITEM_MOVE_BULLET) {
-							worldY = -0.8f;
+							worldY = -0.75f;
 						}
 
 						// Convert normalized screen position to3D world space using the chosen top-middle Y
