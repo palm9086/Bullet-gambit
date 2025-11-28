@@ -411,13 +411,15 @@ static glm::vec2 getNormalizedSize(unsigned int texID)
 void setupMainMenu() {
 	activeButtons.clear();
 
+	float scale = 3.0f;
+
 	// Get normalized sizes for each menu texture (use actual image sizes)
-	glm::vec2 quitSize = getNormalizedSize(quitButtonTex);
-	glm::vec2 creditSize = getNormalizedSize(creditButtonTex);
-	glm::vec2 startSize = getNormalizedSize(startButtonTex);
+	glm::vec2 quitSize = getNormalizedSize(quitButtonTex) * scale;
+	glm::vec2 creditSize = getNormalizedSize(creditButtonTex) * scale;
+	glm::vec2 startSize = getNormalizedSize(startButtonTex) * scale;
 
 	// spacing between stacked buttons (normalized)
-	float gap = 0.05f;
+	float gap = 0.0f;
 	// Compute total stack height (quit at bottom -> credit -> start at top)
 	float totalHeight = quitSize.y + gap + creditSize.y + gap + startSize.y;
 	// Base Y position to vertically center the stack (slightly above center) -- keep previous offset of 0.25f
@@ -450,17 +452,17 @@ void setupStartSubMenu() {
 			break;
 		}
 	}
-
+	float scale = 3.0f;
 	// Get sizes for sub-buttons from their textures
-	glm::vec2 twoSize = getNormalizedSize(twoPlayerButtonTex);
-	glm::vec2 botSize = getNormalizedSize(botButtonTex);
+	glm::vec2 twoSize = getNormalizedSize(twoPlayerButtonTex) * scale;
+	glm::vec2 botSize = getNormalizedSize(botButtonTex) * scale;
 	// Place sub-buttons to the right of start button with small gap, align vertically centered to start
-	float gap = 0.02f;
+	float gap = 0.0f;
 	float subX = startPos.x + startSize.x + gap;
 	float twoY = startPos.y + (startSize.y - twoSize.y) / 2.0f;
 	float botY = startPos.y + (startSize.y - botSize.y) / 2.0f;
 	activeButtons.push_back({ twoPlayerButtonTex, glm::vec2(subX, twoY), twoSize, STATE_GAME, false, 0, glm::vec3(0.2f, 0.7f, 0.7f) });
-	activeButtons.push_back({ botButtonTex, glm::vec2(subX + twoSize.x + 0.01f, botY), botSize, STATE_SUBMENU_START, false, 0, glm::vec3(0.5f, 0.5f, 0.5f) });
+	activeButtons.push_back({ botButtonTex, glm::vec2(subX + twoSize.x + 0.0f, botY), botSize, STATE_SUBMENU_START, false, 0, glm::vec3(0.5f, 0.5f, 0.5f) });
 }
 
 void setupGameButtons() {
