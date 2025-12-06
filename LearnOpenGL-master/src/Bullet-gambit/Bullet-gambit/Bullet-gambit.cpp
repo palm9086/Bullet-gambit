@@ -77,6 +77,9 @@ Model* gunModel = nullptr;
 Model* itemModelRoll = nullptr;
 Model* itemModelSkip = nullptr;
 Model* itemModelMove = nullptr;
+// Add table and chair model pointers (do not remove existing pointers)
+Model* tableModel = nullptr;
+Model* chairModel = nullptr;
 // --- END UPDATED MODEL POINTERS ---
 
 GLFWwindow* g_window = nullptr;
@@ -498,7 +501,7 @@ void setupGameButtons() {
 	float ITEM_SPACING = ITEM_SLOT_SIZE_NORM * 1.2f;
 	float itemXBase = (1.0f - ITEM_SLOT_SIZE_NORM * 4.0f) / 2.0f - ITEM_SLOT_SIZE_NORM * 0.2f;
 	float itemY = MARGIN_Y; // Bottom
-	for (int i = 0; i < 4; ++i) {
+for (int i = 0; i < 4; ++i) {
 		activeButtons.push_back({
 			(i == 0 ? slot1Tex : (i == 1 ? slot2Tex : (i == 2 ? slot3Tex : slot4Tex))),
 			glm::vec2(itemXBase + (float)i * ITEM_SPACING, itemY), // Use ITEM_SPACING here
@@ -546,6 +549,9 @@ int main()
 	itemModelSkip = loadAndValidateModel("resources/objects/uno/Untitled.dae", "Skip Item Model (Uno Card)");
 	// 4. Load Move Item Model (Restored to Watch)
 	itemModelMove = loadAndValidateModel("resources/objects/watch/Untitled.dae", "Move Item Model (Watch)");
+	// Load Table and Chair models (non-destructive, after item models)
+	tableModel = loadAndValidateModel("resources/objects/tableset/table.dae", "Table Model");
+	chairModel = loadAndValidateModel("resources/objects/tableset/chair.dae", "Chair Model");
 
 
 	// Load Textures
@@ -706,19 +712,49 @@ int main()
 					model = glm::scale(model, glm::vec3(0.5f));
 					ourShader.setMat4("model", model);
 					gunModel->Draw(ourShader);
+
+					// Render table and two chairs (if loaded) placed under the gun
+					if (tableModel) {
+						glm::mat4 modelTable = glm::mat4(1.0f);
+						// Position table directly below the gun (gun at origin)
+						modelTable = glm::translate(modelTable, glm::vec3(0.0f, -1.0f,0.0f));
+						// Rotate -90 degrees around X axis as requested
+						modelTable = glm::rotate(modelTable, glm::radians(-90.0f), glm::vec3(1.0f,0.0f,0.0f));
+						// Keep the table small
+						modelTable = glm::scale(modelTable, glm::vec3(0.35f));
+						ourShader.setMat4("model", modelTable);
+						tableModel->Draw(ourShader);
+					}
+					if (chairModel) {
+						// Left chair: moved up slightly, moved back along Z, and scaled down
+						glm::mat4 modelChairLeft = glm::mat4(1.0f);
+						modelChairLeft = glm::translate(modelChairLeft, glm::vec3(-1.5f, -0.3f, -0.5f)); // moved back on Z
+						modelChairLeft = glm::rotate(modelChairLeft, glm::radians(-90.0f), glm::vec3(0.0f,1.0f,0.0f));
+						modelChairLeft = glm::scale(modelChairLeft, glm::vec3(0.2f)); // smaller
+						ourShader.setMat4("model", modelChairLeft);
+						chairModel->Draw(ourShader);
+
+						// Right chair: moved up slightly, moved back along Z, and scaled down
+						glm::mat4 modelChairRight = glm::mat4(1.0f);
+						modelChairRight = glm::translate(modelChairRight, glm::vec3(1.5f, -0.3f, -0.5f)); // moved back on Z
+						modelChairRight = glm::rotate(modelChairRight, glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f));
+						modelChairRight = glm::scale(modelChairRight, glm::vec3(0.2f)); // smaller
+						ourShader.setMat4("model", modelChairRight);
+						chairModel->Draw(ourShader);
+					}
 				}
 
 				// --- ITEM MODEL RENDERING WITH CUSTOM SCALING AND TRANSLATION ---
 				auto& currentItems = player1Turn ? player1Items : player2Items;
 
 				// Fix: Re-calculate Item Slot Positions variables (ITEM_SPACING, itemXBase) here for scope
-				float ITEM_SPACING = ITEM_SLOT_SIZE_NORM * 1.2f;
-				float itemXBase = (1.0f - ITEM_SLOT_SIZE_NORM * 4.0f) / 2.0f - ITEM_SLOT_SIZE_NORM * 0.2f;
+				float ITEM_SPACING = ITEM_SLOT_SIZE_NORM *1.2f;
+				float itemXBase = (1.0f - ITEM_SLOT_SIZE_NORM *4.0f) /2.0f - ITEM_SLOT_SIZE_NORM *0.2f;
 
 				// World coordinate mapping (approximate)
-				float worldX_scale = 10.0f;
+				float worldX_scale =10.0f;
 
-				for (int i = 0; i < (int)currentItems.size(); ++i) {
+				for (int i =0; i < (int)currentItems.size(); ++i) {
 					ItemType type = currentItems[i];
 					Model* modelToDraw = nullptr;
 
@@ -730,44 +766,38 @@ int main()
 					if (modelToDraw) {
 						// SAFE CHECK: Only draw if the model pointer is valid (not nullptr).
 						// Calculate normalized X at the center of the button slot
-						float normX_center = itemXBase + (float)i * ITEM_SPACING + ITEM_SLOT_SIZE_NORM * 0.5f; // center of slot
+						float normX_center = itemXBase + (float)i * ITEM_SPACING + ITEM_SLOT_SIZE_NORM *0.5f; // center of slot
 
 						// Choose normalized Y per item type (different vertical stacks per item)
-						float worldY;
-						if (type == ITEM_ROLL) {
-							worldY = -1.05f;
-						}
-						else if (type == ITEM_SKIP) {
-							worldY = -1.0f;
-						}
-						else if (type == ITEM_MOVE_BULLET) {
-							worldY = -0.75f;
-						}
+						float worldY = -1.0f;
+						if (type == ITEM_ROLL) worldY = -1.05f;
+						else if (type == ITEM_SKIP) worldY = -1.0f;
+						else if (type == ITEM_MOVE_BULLET) worldY = -0.75f;
 
 						// Convert normalized screen position to3D world space using the chosen top-middle Y
-						float worldX = (normX_center - 0.5f) * worldX_scale;
+						float worldX = (normX_center -0.5f) * worldX_scale;
 						glm::mat4 model = glm::mat4(1.0f);
 
-						model = glm::translate(model, glm::vec3(worldX, worldY, 0.0f));
+						model = glm::translate(model, glm::vec3(worldX, worldY,0.0f));
 						// Specific scaling and rotation adjustments for each model
-						float scale = 1.0f;
+						float scale =1.0f;
 						if (type == ITEM_ROLL) {
 							// Roll Object: scaled for visibility
-							scale = 0.04f;
+							scale =0.04f;
 							// orient upright
-							model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+							model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f,0.0f,0.0f));
 							// Keep roll's rotation but spin around Z axis (bread special case)
-							model = glm::rotate(model, (float)glfwGetTime() * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+							model = glm::rotate(model, (float)glfwGetTime() * glm::radians(90.0f), glm::vec3(0.0f,0.0f,1.0f));
 						}
 						else if (type == ITEM_SKIP) {
 							// Skip Object: small scale and spin in Y axis
-							scale = 0.005f;
-							model = glm::rotate(model, (float)glfwGetTime() * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+							scale =0.005f;
+							model = glm::rotate(model, (float)glfwGetTime() * glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f));
 						}
 						else if (type == ITEM_MOVE_BULLET) {
-							// Move Object: scaled2x larger than previous2.0f ->4.0f
-							scale = 4.0f;
-							// Add spin around the Y-axis
+							// Move Object: scaled larger
+							scale =4.0f;
+							// Keep roll's rotation but spin around Z axis (bread special case)
 							model = glm::rotate(model, (float)glfwGetTime() * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 						}
 
@@ -990,6 +1020,8 @@ int main()
 	if (itemModelRoll) { delete itemModelRoll; itemModelRoll = nullptr; }
 	if (itemModelSkip) { delete itemModelSkip; itemModelSkip = nullptr; }
 	if (itemModelMove) { delete itemModelMove; itemModelMove = nullptr; }
+	if (tableModel) { delete tableModel; tableModel = nullptr; }
+	if (chairModel) { delete chairModel; chairModel = nullptr; }
 	// --- END FIXED MODEL DELETION ---
 
 	glfwTerminate();
@@ -1178,8 +1210,8 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 					return;
 				}
 
-				// Handle Utility Buttons (Action codes 3 and 4)
-				if (btn.actionCode == 3) { // Back button
+				// Handle Utility Buttons (Action codes3 and4)
+				if (btn.actionCode ==3) { // Back button
 					if (currentGameState == STATE_GAME) {
 						// If the Description Panel is open, close it instead of going back
 						if (showItemDescription) {
@@ -1197,7 +1229,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 					}
 					return;
 				}
-				else if (btn.actionCode == 4) { // Description button
+				else if (btn.actionCode ==4) { // Description button
 					if (currentGameState == STATE_GAME && !gameOver && !isPlayerTurnIndicator(currentStatusTex) && currentStatusTex != clickTex) {
 						showItemDescription = !showItemDescription;
 					}
