@@ -1,0 +1,1150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+  <asset>
+    <contributor>
+      <author>Mixamo</author>
+      <authoring_tool>COLLADA Mixamo exporter</authoring_tool>
+      <comments/>
+    </contributor>
+    <created>2025-12-11T10:11:55Z</created>
+    <modified>2025-12-11T10:11:55Z</modified>
+    <revision/>
+    <title/>
+    <unit meter="0.010000"/>
+    <up_axis>Y_UP</up_axis>
+  </asset>
+  <library_animations>
+    <animation id="Armature-anim" name="Armature">
+      <source id="Armature-Matrix-animation-input">
+        <float_array id="Armature-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#Armature-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="Armature-Matrix-animation-output-transform">
+        <float_array id="Armature-Matrix-animation-output-transform-array" count="32">
+
+-81.688515 -56.494901 -11.632397 -33.279182 -55.338679 82.449879 -11.817275 51.832558 16.267055 -3.216142 -98.615614 200.335205 0.000000 0.000000 0.000000 1.000000
+-81.704954 -56.411016 -11.920474 -32.440632 -55.170955 82.498434 -12.254554 52.939198 16.747123 -3.435938 -98.527804 199.980164 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#Armature-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="Armature-Interpolations">
+        <Name_array id="Armature-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#Armature-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="Armature-Matrix-animation-transform">
+        <input semantic="INPUT" source="#Armature-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#Armature-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#Armature-Interpolations"/>
+      </sampler>
+      <channel source="#Armature-Matrix-animation-transform" target="Armature/matrix"/>
+    </animation>
+    <animation id="root-anim" name="root">
+      <source id="root-Matrix-animation-input">
+        <float_array id="root-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#root-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="root-Matrix-animation-output-transform">
+        <float_array id="root-Matrix-animation-output-transform-array" count="32">
+
+1.000000 0.000000 0.000000 0.000000 0.000000 0.000000 -1.000000 0.000000 -0.000000 1.000000 0.000000 0.000000 0.000000 0.000000 0.000000 1.000000
+1.000000 0.000000 0.000000 0.000000 -0.000000 0.000000 -1.000000 0.000000 -0.000000 1.000000 0.000000 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#root-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="root-Interpolations">
+        <Name_array id="root-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#root-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="root-Matrix-animation-transform">
+        <input semantic="INPUT" source="#root-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#root-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#root-Interpolations"/>
+      </sampler>
+      <channel source="#root-Matrix-animation-transform" target="root/matrix"/>
+    </animation>
+    <animation id="controller-anim" name="controller">
+      <source id="controller-Matrix-animation-input">
+        <float_array id="controller-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#controller-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="controller-Matrix-animation-output-transform">
+        <float_array id="controller-Matrix-animation-output-transform-array" count="32">
+
+1.000000 -0.000000 -0.000002 -0.000000 -0.000002 0.000000 -1.000000 2.767800 0.000000 1.000000 0.000000 -0.139600 0.000000 0.000000 0.000000 1.000000
+1.000000 0.000000 -0.000002 0.000000 -0.000002 0.000000 -1.000000 2.767800 -0.000000 1.000000 0.000000 -0.139600 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#controller-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="controller-Interpolations">
+        <Name_array id="controller-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#controller-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="controller-Matrix-animation-transform">
+        <input semantic="INPUT" source="#controller-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#controller-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#controller-Interpolations"/>
+      </sampler>
+      <channel source="#controller-Matrix-animation-transform" target="controller/matrix"/>
+    </animation>
+    <animation id="spinel-anim" name="spinel">
+      <source id="spinel-Matrix-animation-input">
+        <float_array id="spinel-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#spinel-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="spinel-Matrix-animation-output-transform">
+        <float_array id="spinel-Matrix-animation-output-transform-array" count="32">
+
+0.997826 0.018213 0.063334 0.000000 -0.062430 -0.046523 0.996964 0.000000 0.021104 -0.998751 -0.045284 0.000000 0.000000 0.000000 0.000000 1.000000
+0.997850 0.018281 0.062931 0.000000 -0.062022 -0.046628 0.996985 0.000000 0.021160 -0.998745 -0.045394 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#spinel-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="spinel-Interpolations">
+        <Name_array id="spinel-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#spinel-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="spinel-Matrix-animation-transform">
+        <input semantic="INPUT" source="#spinel-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#spinel-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#spinel-Interpolations"/>
+      </sampler>
+      <channel source="#spinel-Matrix-animation-transform" target="spinel/matrix"/>
+    </animation>
+    <animation id="spineu-anim" name="spineu">
+      <source id="spineu-Matrix-animation-input">
+        <float_array id="spineu-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#spineu-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="spineu-Matrix-animation-output-transform">
+        <float_array id="spineu-Matrix-animation-output-transform-array" count="32">
+
+0.991342 0.023885 0.129111 -0.000000 -0.055830 0.966676 0.249841 0.882200 -0.118841 -0.254886 0.959641 0.000000 0.000000 0.000000 0.000000 1.000000
+0.991435 0.023480 0.128476 0.000000 -0.055304 0.966634 0.250119 0.882200 -0.118317 -0.255082 0.959653 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#spineu-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="spineu-Interpolations">
+        <Name_array id="spineu-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#spineu-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="spineu-Matrix-animation-transform">
+        <input semantic="INPUT" source="#spineu-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#spineu-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#spineu-Interpolations"/>
+      </sampler>
+      <channel source="#spineu-Matrix-animation-transform" target="spineu/matrix"/>
+    </animation>
+    <animation id="neck-anim" name="neck">
+      <source id="neck-Matrix-animation-input">
+        <float_array id="neck-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#neck-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="neck-Matrix-animation-output-transform">
+        <float_array id="neck-Matrix-animation-output-transform-array" count="32">
+
+0.984024 0.157237 0.083502 0.000000 -0.147263 0.982441 -0.114553 0.799200 -0.100047 0.100426 0.989902 -0.000000 0.000000 0.000000 0.000000 1.000000
+0.984050 0.157240 0.083200 -0.000000 -0.147309 0.982449 -0.114429 0.799200 -0.099733 0.100347 0.989941 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#neck-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="neck-Interpolations">
+        <Name_array id="neck-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#neck-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="neck-Matrix-animation-transform">
+        <input semantic="INPUT" source="#neck-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#neck-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#neck-Interpolations"/>
+      </sampler>
+      <channel source="#neck-Matrix-animation-transform" target="neck/matrix"/>
+    </animation>
+    <animation id="head-anim" name="head">
+      <source id="head-Matrix-animation-input">
+        <float_array id="head-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#head-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="head-Matrix-animation-output-transform">
+        <float_array id="head-Matrix-animation-output-transform-array" count="32">
+
+0.984025 0.155552 0.086597 -0.000000 -0.151642 0.987166 -0.050078 0.428800 -0.093275 0.036146 0.994984 -0.000000 0.000000 0.000000 0.000000 1.000000
+0.984050 0.155561 0.086295 -0.000000 -0.151673 0.987167 -0.049959 0.428800 -0.092959 0.036074 0.995016 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#head-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="head-Interpolations">
+        <Name_array id="head-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#head-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="head-Matrix-animation-transform">
+        <input semantic="INPUT" source="#head-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#head-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#head-Interpolations"/>
+      </sampler>
+      <channel source="#head-Matrix-animation-transform" target="head/matrix"/>
+    </animation>
+    <animation id="shoulder.l-anim" name="shoulder.l">
+      <source id="shoulder.l-Matrix-animation-input">
+        <float_array id="shoulder.l-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#shoulder.l-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="shoulder.l-Matrix-animation-output-transform">
+        <float_array id="shoulder.l-Matrix-animation-output-transform-array" count="32">
+
+-0.003806 -0.857983 0.513663 -0.243100 0.999841 -0.012208 -0.012983 0.479800 0.017410 0.513532 0.857894 -0.008100 0.000000 0.000000 0.000000 1.000000
+-0.000757 -0.858646 0.512568 -0.243100 0.999720 -0.012769 -0.019914 0.479800 0.023644 0.512410 0.858416 -0.008100 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#shoulder.l-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="shoulder.l-Interpolations">
+        <Name_array id="shoulder.l-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#shoulder.l-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="shoulder.l-Matrix-animation-transform">
+        <input semantic="INPUT" source="#shoulder.l-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#shoulder.l-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#shoulder.l-Interpolations"/>
+      </sampler>
+      <channel source="#shoulder.l-Matrix-animation-transform" target="shoulder.l/matrix"/>
+    </animation>
+    <animation id="armu.l-anim" name="armu.l">
+      <source id="armu.l-Matrix-animation-input">
+        <float_array id="armu.l-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#armu.l-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="armu.l-Matrix-animation-output-transform">
+        <float_array id="armu.l-Matrix-animation-output-transform-array" count="32">
+
+0.514104 -0.800242 -0.308723 -0.000000 0.456128 0.559888 -0.691717 0.409500 0.726391 0.214797 0.652854 0.000000 0.000000 0.000000 0.000000 1.000000
+0.467125 -0.809893 -0.354780 0.000000 0.388960 0.548561 -0.740129 0.409500 0.794043 0.207737 0.571262 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#armu.l-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="armu.l-Interpolations">
+        <Name_array id="armu.l-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#armu.l-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="armu.l-Matrix-animation-transform">
+        <input semantic="INPUT" source="#armu.l-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#armu.l-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#armu.l-Interpolations"/>
+      </sampler>
+      <channel source="#armu.l-Matrix-animation-transform" target="armu.l/matrix"/>
+    </animation>
+    <animation id="arml.l-anim" name="arml.l">
+      <source id="arml.l-Matrix-animation-input">
+        <float_array id="arml.l-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#arml.l-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="arml.l-Matrix-animation-output-transform">
+        <float_array id="arml.l-Matrix-animation-output-transform-array" count="32">
+
+0.999746 -0.006103 0.021680 0.000000 -0.006449 0.844719 0.535172 0.571400 -0.021579 -0.535176 0.844465 0.000000 0.000000 0.000000 0.000000 1.000000
+0.998838 -0.015732 0.045546 0.000000 -0.010854 0.847459 0.530750 0.571400 -0.046948 -0.530628 0.846304 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#arml.l-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="arml.l-Interpolations">
+        <Name_array id="arml.l-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#arml.l-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="arml.l-Matrix-animation-transform">
+        <input semantic="INPUT" source="#arml.l-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#arml.l-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#arml.l-Interpolations"/>
+      </sampler>
+      <channel source="#arml.l-Matrix-animation-transform" target="arml.l/matrix"/>
+    </animation>
+    <animation id="hand.l-anim" name="hand.l">
+      <source id="hand.l-Matrix-animation-input">
+        <float_array id="hand.l-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#hand.l-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="hand.l-Matrix-animation-output-transform">
+        <float_array id="hand.l-Matrix-animation-output-transform-array" count="32">
+
+0.675288 -0.365297 0.640737 -0.000000 0.316329 0.928221 0.195810 0.903800 -0.666274 0.070455 0.742371 0.000000 0.000000 0.000000 0.000000 1.000000
+0.605917 -0.403268 0.685741 0.000000 0.340412 0.910522 0.234670 0.903800 -0.719016 0.091244 0.688978 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#hand.l-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="hand.l-Interpolations">
+        <Name_array id="hand.l-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#hand.l-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="hand.l-Matrix-animation-transform">
+        <input semantic="INPUT" source="#hand.l-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#hand.l-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#hand.l-Interpolations"/>
+      </sampler>
+      <channel source="#hand.l-Matrix-animation-transform" target="hand.l/matrix"/>
+    </animation>
+    <animation id="shoulder.r-anim" name="shoulder.r">
+      <source id="shoulder.r-Matrix-animation-input">
+        <float_array id="shoulder.r-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#shoulder.r-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="shoulder.r-Matrix-animation-output-transform">
+        <float_array id="shoulder.r-Matrix-animation-output-transform-array" count="32">
+
+0.239229 0.968492 0.069229 0.243100 -0.953010 0.220560 0.207666 0.479800 0.185854 -0.115656 0.975747 -0.008100 0.000000 0.000000 0.000000 1.000000
+0.241016 0.967433 0.077367 0.243100 -0.953169 0.220946 0.206524 0.479800 0.182704 -0.123520 0.975378 -0.008100 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#shoulder.r-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="shoulder.r-Interpolations">
+        <Name_array id="shoulder.r-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#shoulder.r-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="shoulder.r-Matrix-animation-transform">
+        <input semantic="INPUT" source="#shoulder.r-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#shoulder.r-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#shoulder.r-Interpolations"/>
+      </sampler>
+      <channel source="#shoulder.r-Matrix-animation-transform" target="shoulder.r/matrix"/>
+    </animation>
+    <animation id="armu.r-anim" name="armu.r">
+      <source id="armu.r-Matrix-animation-input">
+        <float_array id="armu.r-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#armu.r-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="armu.r-Matrix-animation-output-transform">
+        <float_array id="armu.r-Matrix-animation-output-transform-array" count="32">
+
+0.092253 0.962390 0.255530 0.000000 -0.921146 0.179936 -0.345126 0.409500 -0.378125 -0.203542 0.903101 -0.000000 0.000000 0.000000 0.000000 1.000000
+0.096656 0.966303 0.238571 0.000000 -0.917908 0.179218 -0.354013 0.409500 -0.384840 -0.184769 0.904300 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#armu.r-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="armu.r-Interpolations">
+        <Name_array id="armu.r-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#armu.r-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="armu.r-Matrix-animation-transform">
+        <input semantic="INPUT" source="#armu.r-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#armu.r-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#armu.r-Interpolations"/>
+      </sampler>
+      <channel source="#armu.r-Matrix-animation-transform" target="armu.r/matrix"/>
+    </animation>
+    <animation id="arml.r-anim" name="arml.r">
+      <source id="arml.r-Matrix-animation-input">
+        <float_array id="arml.r-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#arml.r-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="arml.r-Matrix-animation-output-transform">
+        <float_array id="arml.r-Matrix-animation-output-transform-array" count="32">
+
+0.126804 0.044618 0.990924 0.000000 -0.330090 0.943949 -0.000262 0.571400 -0.935393 -0.327061 0.134425 0.000000 0.000000 0.000000 0.000000 1.000000
+0.128393 0.046982 0.990610 0.000000 -0.353549 0.935415 0.001459 0.571400 -0.926563 -0.350416 0.136712 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#arml.r-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="arml.r-Interpolations">
+        <Name_array id="arml.r-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#arml.r-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="arml.r-Matrix-animation-transform">
+        <input semantic="INPUT" source="#arml.r-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#arml.r-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#arml.r-Interpolations"/>
+      </sampler>
+      <channel source="#arml.r-Matrix-animation-transform" target="arml.r/matrix"/>
+    </animation>
+    <animation id="hand.r-anim" name="hand.r">
+      <source id="hand.r-Matrix-animation-input">
+        <float_array id="hand.r-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#hand.r-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="hand.r-Matrix-animation-output-transform">
+        <float_array id="hand.r-Matrix-animation-output-transform-array" count="32">
+
+0.941503 -0.010754 -0.336834 0.000000 0.091792 0.969885 0.225606 0.903800 0.324263 -0.243327 0.914136 -0.000000 0.000000 0.000000 0.000000 1.000000
+0.941443 -0.024841 -0.336255 0.000000 0.104534 0.969646 0.221042 0.903800 0.320558 -0.243249 0.915463 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#hand.r-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="hand.r-Interpolations">
+        <Name_array id="hand.r-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#hand.r-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="hand.r-Matrix-animation-transform">
+        <input semantic="INPUT" source="#hand.r-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#hand.r-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#hand.r-Interpolations"/>
+      </sampler>
+      <channel source="#hand.r-Matrix-animation-transform" target="hand.r/matrix"/>
+    </animation>
+    <animation id="uhh-anim" name="uhh">
+      <source id="uhh-Matrix-animation-input">
+        <float_array id="uhh-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#uhh-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="uhh-Matrix-animation-output-transform">
+        <float_array id="uhh-Matrix-animation-output-transform-array" count="32">
+
+1.000000 0.000002 -0.000002 0.000000 -0.000002 -0.079759 -0.996814 0.000000 -0.000002 0.996814 -0.079759 0.000000 0.000000 0.000000 0.000000 1.000000
+1.000000 0.000002 -0.000002 0.000000 -0.000002 -0.079759 -0.996814 0.000000 -0.000002 0.996814 -0.079759 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#uhh-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="uhh-Interpolations">
+        <Name_array id="uhh-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#uhh-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="uhh-Matrix-animation-transform">
+        <input semantic="INPUT" source="#uhh-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#uhh-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#uhh-Interpolations"/>
+      </sampler>
+      <channel source="#uhh-Matrix-animation-transform" target="uhh/matrix"/>
+    </animation>
+    <animation id="legu.l-anim" name="legu.l">
+      <source id="legu.l-Matrix-animation-input">
+        <float_array id="legu.l-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#legu.l-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="legu.l-Matrix-animation-output-transform">
+        <float_array id="legu.l-Matrix-animation-output-transform-array" count="32">
+
+0.965285 0.048128 0.256728 -0.371100 0.020268 0.966113 -0.257323 0.383000 -0.260412 0.253593 0.931599 -0.030600 0.000000 0.000000 0.000000 1.000000
+0.966346 0.050210 0.252297 -0.371100 0.016259 0.966884 -0.254697 0.383000 -0.256730 0.250228 0.933529 -0.030600 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#legu.l-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="legu.l-Interpolations">
+        <Name_array id="legu.l-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#legu.l-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="legu.l-Matrix-animation-transform">
+        <input semantic="INPUT" source="#legu.l-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#legu.l-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#legu.l-Interpolations"/>
+      </sampler>
+      <channel source="#legu.l-Matrix-animation-transform" target="legu.l/matrix"/>
+    </animation>
+    <animation id="legl.l-anim" name="legl.l">
+      <source id="legl.l-Matrix-animation-input">
+        <float_array id="legl.l-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#legl.l-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="legl.l-Matrix-animation-output-transform">
+        <float_array id="legl.l-Matrix-animation-output-transform-array" count="32">
+
+0.952613 -0.156178 0.261032 0.000000 -0.263084 0.007753 0.964742 1.048600 -0.152695 -0.987699 -0.033703 0.000000 0.000000 0.000000 0.000000 1.000000
+0.952854 -0.156225 0.260120 0.000000 -0.261388 0.012737 0.965150 1.048600 -0.154094 -0.987639 -0.028698 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#legl.l-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="legl.l-Interpolations">
+        <Name_array id="legl.l-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#legl.l-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="legl.l-Matrix-animation-transform">
+        <input semantic="INPUT" source="#legl.l-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#legl.l-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#legl.l-Interpolations"/>
+      </sampler>
+      <channel source="#legl.l-Matrix-animation-transform" target="legl.l/matrix"/>
+    </animation>
+    <animation id="feetu.l-anim" name="feetu.l">
+      <source id="feetu.l-Matrix-animation-input">
+        <float_array id="feetu.l-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#feetu.l-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="feetu.l-Matrix-animation-output-transform">
+        <float_array id="feetu.l-Matrix-animation-output-transform-array" count="32">
+
+0.895300 0.099531 -0.434201 0.000000 -0.441319 0.330821 -0.834143 0.994800 0.060619 0.938430 0.340109 0.000000 0.000000 0.000000 0.000000 1.000000
+0.891584 0.102055 -0.441206 0.000000 -0.448504 0.333734 -0.829136 0.994800 0.062628 0.937127 0.343324 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#feetu.l-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="feetu.l-Interpolations">
+        <Name_array id="feetu.l-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#feetu.l-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="feetu.l-Matrix-animation-transform">
+        <input semantic="INPUT" source="#feetu.l-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#feetu.l-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#feetu.l-Interpolations"/>
+      </sampler>
+      <channel source="#feetu.l-Matrix-animation-transform" target="feetu.l/matrix"/>
+    </animation>
+    <animation id="feetl.l-anim" name="feetl.l">
+      <source id="feetl.l-Matrix-animation-input">
+        <float_array id="feetl.l-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#feetl.l-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="feetl.l-Matrix-animation-output-transform">
+        <float_array id="feetl.l-Matrix-animation-output-transform-array" count="32">
+
+0.983680 0.035688 -0.176353 0.000000 -0.051677 0.994874 -0.086915 0.671900 0.172347 0.094610 0.980482 0.000000 0.000000 0.000000 0.000000 1.000000
+0.983831 0.037833 -0.175056 0.000000 -0.053387 0.994949 -0.085012 0.671900 0.170956 0.092983 0.980881 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#feetl.l-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="feetl.l-Interpolations">
+        <Name_array id="feetl.l-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#feetl.l-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="feetl.l-Matrix-animation-transform">
+        <input semantic="INPUT" source="#feetl.l-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#feetl.l-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#feetl.l-Interpolations"/>
+      </sampler>
+      <channel source="#feetl.l-Matrix-animation-transform" target="feetl.l/matrix"/>
+    </animation>
+    <animation id="legu.r-anim" name="legu.r">
+      <source id="legu.r-Matrix-animation-input">
+        <float_array id="legu.r-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#legu.r-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="legu.r-Matrix-animation-output-transform">
+        <float_array id="legu.r-Matrix-animation-output-transform-array" count="32">
+
+0.506974 0.349952 0.787725 0.371100 -0.139082 0.935112 -0.325917 0.383000 -0.850666 0.055673 0.522750 -0.030600 0.000000 0.000000 0.000000 1.000000
+0.506684 0.356427 0.785004 0.371100 -0.144247 0.932751 -0.330406 0.383000 -0.849979 0.054178 0.524024 -0.030600 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#legu.r-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="legu.r-Interpolations">
+        <Name_array id="legu.r-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#legu.r-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="legu.r-Matrix-animation-transform">
+        <input semantic="INPUT" source="#legu.r-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#legu.r-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#legu.r-Interpolations"/>
+      </sampler>
+      <channel source="#legu.r-Matrix-animation-transform" target="legu.r/matrix"/>
+    </animation>
+    <animation id="legl.r-anim" name="legl.r">
+      <source id="legl.r-Matrix-animation-input">
+        <float_array id="legl.r-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#legl.r-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="legl.r-Matrix-animation-output-transform">
+        <float_array id="legl.r-Matrix-animation-output-transform-array" count="32">
+
+0.987923 -0.050640 0.146434 -0.000000 -0.149933 -0.074063 0.985918 1.048600 -0.039082 -0.995967 -0.080761 0.000000 0.000000 0.000000 0.000000 1.000000
+0.990642 -0.052030 0.126180 0.000000 -0.129924 -0.076260 0.988587 1.048600 -0.041813 -0.995730 -0.082307 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#legl.r-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="legl.r-Interpolations">
+        <Name_array id="legl.r-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#legl.r-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="legl.r-Matrix-animation-transform">
+        <input semantic="INPUT" source="#legl.r-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#legl.r-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#legl.r-Interpolations"/>
+      </sampler>
+      <channel source="#legl.r-Matrix-animation-transform" target="legl.r/matrix"/>
+    </animation>
+    <animation id="feetu.r-anim" name="feetu.r">
+      <source id="feetu.r-Matrix-animation-input">
+        <float_array id="feetu.r-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#feetu.r-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="feetu.r-Matrix-animation-output-transform">
+        <float_array id="feetu.r-Matrix-animation-output-transform-array" count="32">
+
+0.995700 -0.018529 -0.090768 0.000000 -0.058651 0.632334 -0.772472 0.994800 0.071709 0.774474 0.628528 -0.000000 0.000000 0.000000 0.000000 1.000000
+0.996848 -0.003109 -0.079277 0.000000 -0.059451 0.632398 -0.772359 0.994800 0.052536 0.774637 0.630220 -0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#feetu.r-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="feetu.r-Interpolations">
+        <Name_array id="feetu.r-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#feetu.r-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="feetu.r-Matrix-animation-transform">
+        <input semantic="INPUT" source="#feetu.r-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#feetu.r-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#feetu.r-Interpolations"/>
+      </sampler>
+      <channel source="#feetu.r-Matrix-animation-transform" target="feetu.r/matrix"/>
+    </animation>
+    <animation id="feetl.r-anim" name="feetl.r">
+      <source id="feetl.r-Matrix-animation-input">
+        <float_array id="feetl.r-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#feetl.r-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="feetl.r-Matrix-animation-output-transform">
+        <float_array id="feetl.r-Matrix-animation-output-transform-array" count="32">
+
+0.999898 -0.008166 -0.011676 0.000000 0.007789 0.999460 -0.031927 0.671900 0.011931 0.031832 0.999422 -0.000000 0.000000 0.000000 0.000000 1.000000
+0.999942 -0.006362 -0.008692 0.000000 0.006079 0.999460 -0.032282 0.671900 0.008893 0.032227 0.999441 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#feetl.r-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="feetl.r-Interpolations">
+        <Name_array id="feetl.r-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#feetl.r-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="feetl.r-Matrix-animation-transform">
+        <input semantic="INPUT" source="#feetl.r-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#feetl.r-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#feetl.r-Interpolations"/>
+      </sampler>
+      <channel source="#feetl.r-Matrix-animation-transform" target="feetl.r/matrix"/>
+    </animation>
+    <animation id="tail1-anim" name="tail1">
+      <source id="tail1-Matrix-animation-input">
+        <float_array id="tail1-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#tail1-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="tail1-Matrix-animation-output-transform">
+        <float_array id="tail1-Matrix-animation-output-transform-array" count="32">
+
+-1.000000 -0.000001 -0.000001 0.000000 -0.000000 0.823169 -0.567796 0.764900 0.000002 -0.567796 -0.823169 0.335500 0.000000 0.000000 0.000000 1.000000
+-1.000000 -0.000001 -0.000001 -0.000000 0.000000 0.823169 -0.567796 0.764900 0.000002 -0.567796 -0.823169 0.335500 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#tail1-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="tail1-Interpolations">
+        <Name_array id="tail1-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#tail1-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="tail1-Matrix-animation-transform">
+        <input semantic="INPUT" source="#tail1-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#tail1-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#tail1-Interpolations"/>
+      </sampler>
+      <channel source="#tail1-Matrix-animation-transform" target="tail1/matrix"/>
+    </animation>
+    <animation id="tail2-anim" name="tail2">
+      <source id="tail2-Matrix-animation-input">
+        <float_array id="tail2-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#tail2-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="tail2-Matrix-animation-output-transform">
+        <float_array id="tail2-Matrix-animation-output-transform-array" count="32">
+
+1.000000 -0.000000 -0.000000 -0.000000 0.000000 0.852701 -0.522399 1.075200 0.000000 0.522399 0.852701 -0.000000 0.000000 0.000000 0.000000 1.000000
+1.000000 -0.000000 -0.000000 0.000000 0.000000 0.852701 -0.522399 1.075200 0.000000 0.522399 0.852701 -0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#tail2-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="tail2-Interpolations">
+        <Name_array id="tail2-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#tail2-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="tail2-Matrix-animation-transform">
+        <input semantic="INPUT" source="#tail2-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#tail2-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#tail2-Interpolations"/>
+      </sampler>
+      <channel source="#tail2-Matrix-animation-transform" target="tail2/matrix"/>
+    </animation>
+    <animation id="tail3-anim" name="tail3">
+      <source id="tail3-Matrix-animation-input">
+        <float_array id="tail3-Matrix-animation-input-array" count="2">
+
+0.000000 0.033333</float_array>
+        <technique_common>
+          <accessor source="#tail3-Matrix-animation-input-array" count="2">
+            <param name="TIME" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="tail3-Matrix-animation-output-transform">
+        <float_array id="tail3-Matrix-animation-output-transform-array" count="32">
+
+0.998615 -0.010233 -0.051614 0.000000 0.041530 0.755619 0.653694 0.891400 0.032311 -0.654931 0.754997 0.000000 0.000000 0.000000 0.000000 1.000000
+0.998615 -0.010233 -0.051614 -0.000000 0.041530 0.755619 0.653694 0.891400 0.032311 -0.654931 0.754997 0.000000 0.000000 0.000000 0.000000 1.000000</float_array>
+        <technique_common>
+          <accessor source="#tail3-Matrix-animation-output-transform-array" count="2" stride="16">
+            <param type="float4x4"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="tail3-Interpolations">
+        <Name_array id="tail3-Interpolations-array" count="2">
+ LINEAR LINEAR</Name_array>
+        <technique_common>
+          <accessor source="#tail3-Interpolations-array" count="2">
+            <param type="name"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <sampler id="tail3-Matrix-animation-transform">
+        <input semantic="INPUT" source="#tail3-Matrix-animation-input"/>
+        <input semantic="OUTPUT" source="#tail3-Matrix-animation-output-transform"/>
+        <input semantic="INTERPOLATION" source="#tail3-Interpolations"/>
+      </sampler>
+      <channel source="#tail3-Matrix-animation-transform" target="tail3/matrix"/>
+    </animation>
+  </library_animations>
+  <library_visual_scenes>
+    <visual_scene id="RootNode" name="RootNode">
+      <node id="Armature" name="Armature" sid="Armature" type="JOINT">
+        <matrix sid="matrix">-81.688515 -56.494901 -11.632397 -33.279182 -55.338679 82.449879 -11.817275 51.832558 16.267055 -3.216142 -98.615614 200.335205 0.000000 0.000000 0.000000 1.000000</matrix>
+        <node id="root" name="root" sid="root" type="JOINT">
+          <matrix sid="matrix">1.000000 0.000000 0.000000 0.000000 0.000000 0.000000 -1.000000 0.000000 -0.000000 1.000000 0.000000 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+          <node id="controller" name="controller" sid="controller" type="JOINT">
+            <matrix sid="matrix">1.000000 -0.000000 -0.000002 -0.000000 -0.000002 0.000000 -1.000000 2.767800 0.000000 1.000000 0.000000 -0.139600 0.000000 0.000000 0.000000 1.000000</matrix>
+            <node id="spinel" name="spinel" sid="spinel" type="JOINT">
+              <matrix sid="matrix">0.997826 0.018213 0.063334 0.000000 -0.062430 -0.046523 0.996964 0.000000 0.021104 -0.998751 -0.045284 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+              <node id="spineu" name="spineu" sid="spineu" type="JOINT">
+                <matrix sid="matrix">0.991342 0.023885 0.129111 -0.000000 -0.055830 0.966676 0.249841 0.882200 -0.118841 -0.254886 0.959641 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                <node id="neck" name="neck" sid="neck" type="JOINT">
+                  <matrix sid="matrix">0.984024 0.157237 0.083502 0.000000 -0.147263 0.982441 -0.114553 0.799200 -0.100047 0.100426 0.989902 -0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                  <node id="head" name="head" sid="head" type="JOINT">
+                    <matrix sid="matrix">0.984025 0.155552 0.086597 -0.000000 -0.151642 0.987166 -0.050078 0.428800 -0.093275 0.036146 0.994984 -0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                    <node id="head_end" name="head_end" sid="head_end" type="JOINT">
+                      <matrix sid="matrix">1.000000 0.000000 0.000000 -0.000000 0.000000 1.000000 -0.000000 2.229100 -0.000000 -0.000000 1.000000 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                    </node>
+                  </node>
+                </node>
+                <node id="shoulder.l" name="shoulder.l" sid="shoulder.l" type="JOINT">
+                  <matrix sid="matrix">-0.003806 -0.857983 0.513663 -0.243100 0.999841 -0.012208 -0.012983 0.479800 0.017410 0.513532 0.857894 -0.008100 0.000000 0.000000 0.000000 1.000000</matrix>
+                  <node id="armu.l" name="armu.l" sid="armu.l" type="JOINT">
+                    <matrix sid="matrix">0.514104 -0.800242 -0.308723 -0.000000 0.456128 0.559888 -0.691717 0.409500 0.726391 0.214797 0.652854 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                    <node id="arml.l" name="arml.l" sid="arml.l" type="JOINT">
+                      <matrix sid="matrix">0.999746 -0.006103 0.021680 0.000000 -0.006449 0.844719 0.535172 0.571400 -0.021579 -0.535176 0.844465 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                      <node id="hand.l" name="hand.l" sid="hand.l" type="JOINT">
+                        <matrix sid="matrix">0.675288 -0.365297 0.640737 -0.000000 0.316329 0.928221 0.195810 0.903800 -0.666274 0.070455 0.742371 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                        <node id="hand.l_end" name="hand.l_end" sid="hand.l_end" type="JOINT">
+                          <matrix sid="matrix">1.000000 0.000000 0.000000 0.000000 0.000000 1.000000 0.000000 1.042200 0.000000 0.000000 1.000000 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                        </node>
+                      </node>
+                    </node>
+                  </node>
+                </node>
+                <node id="shoulder.r" name="shoulder.r" sid="shoulder.r" type="JOINT">
+                  <matrix sid="matrix">0.239229 0.968492 0.069229 0.243100 -0.953010 0.220560 0.207666 0.479800 0.185854 -0.115656 0.975747 -0.008100 0.000000 0.000000 0.000000 1.000000</matrix>
+                  <node id="armu.r" name="armu.r" sid="armu.r" type="JOINT">
+                    <matrix sid="matrix">0.092253 0.962390 0.255530 0.000000 -0.921146 0.179936 -0.345126 0.409500 -0.378125 -0.203542 0.903101 -0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                    <node id="arml.r" name="arml.r" sid="arml.r" type="JOINT">
+                      <matrix sid="matrix">0.126804 0.044618 0.990924 0.000000 -0.330090 0.943949 -0.000262 0.571400 -0.935393 -0.327061 0.134425 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                      <node id="hand.r" name="hand.r" sid="hand.r" type="JOINT">
+                        <matrix sid="matrix">0.941503 -0.010754 -0.336834 0.000000 0.091792 0.969885 0.225606 0.903800 0.324263 -0.243327 0.914136 -0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                        <node id="hand.r_end" name="hand.r_end" sid="hand.r_end" type="JOINT">
+                          <matrix sid="matrix">1.000000 -0.000000 -0.000000 0.000000 0.000000 1.000000 -0.000000 1.042200 -0.000000 0.000000 1.000000 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                        </node>
+                      </node>
+                    </node>
+                  </node>
+                </node>
+              </node>
+            </node>
+            <node id="uhh" name="uhh" sid="uhh" type="JOINT">
+              <matrix sid="matrix">1.000000 0.000002 -0.000002 0.000000 -0.000002 -0.079759 -0.996814 0.000000 -0.000002 0.996814 -0.079759 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+              <node id="legu.l" name="legu.l" sid="legu.l" type="JOINT">
+                <matrix sid="matrix">0.965285 0.048128 0.256728 -0.371100 0.020268 0.966113 -0.257323 0.383000 -0.260412 0.253593 0.931599 -0.030600 0.000000 0.000000 0.000000 1.000000</matrix>
+                <node id="legl.l" name="legl.l" sid="legl.l" type="JOINT">
+                  <matrix sid="matrix">0.952613 -0.156178 0.261032 0.000000 -0.263084 0.007753 0.964742 1.048600 -0.152695 -0.987699 -0.033703 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                  <node id="feetu.l" name="feetu.l" sid="feetu.l" type="JOINT">
+                    <matrix sid="matrix">0.895300 0.099531 -0.434201 0.000000 -0.441319 0.330821 -0.834143 0.994800 0.060619 0.938430 0.340109 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                    <node id="feetl.l" name="feetl.l" sid="feetl.l" type="JOINT">
+                      <matrix sid="matrix">0.983680 0.035688 -0.176353 0.000000 -0.051677 0.994874 -0.086915 0.671900 0.172347 0.094610 0.980482 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                      <node id="feetl.l_end" name="feetl.l_end" sid="feetl.l_end" type="JOINT">
+                        <matrix sid="matrix">1.000000 -0.000000 -0.000000 -0.000000 -0.000000 1.000000 -0.000000 0.530600 -0.000000 -0.000000 1.000000 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                      </node>
+                    </node>
+                  </node>
+                </node>
+              </node>
+              <node id="legu.r" name="legu.r" sid="legu.r" type="JOINT">
+                <matrix sid="matrix">0.506974 0.349952 0.787725 0.371100 -0.139082 0.935112 -0.325917 0.383000 -0.850666 0.055673 0.522750 -0.030600 0.000000 0.000000 0.000000 1.000000</matrix>
+                <node id="legl.r" name="legl.r" sid="legl.r" type="JOINT">
+                  <matrix sid="matrix">0.987923 -0.050640 0.146434 -0.000000 -0.149933 -0.074063 0.985918 1.048600 -0.039082 -0.995967 -0.080761 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                  <node id="feetu.r" name="feetu.r" sid="feetu.r" type="JOINT">
+                    <matrix sid="matrix">0.995700 -0.018529 -0.090768 0.000000 -0.058651 0.632334 -0.772472 0.994800 0.071709 0.774474 0.628528 -0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                    <node id="feetl.r" name="feetl.r" sid="feetl.r" type="JOINT">
+                      <matrix sid="matrix">0.999898 -0.008166 -0.011676 0.000000 0.007789 0.999460 -0.031927 0.671900 0.011931 0.031832 0.999422 -0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                      <node id="feetl.r_end" name="feetl.r_end" sid="feetl.r_end" type="JOINT">
+                        <matrix sid="matrix">1.000000 -0.000000 0.000000 -0.000000 0.000000 1.000000 0.000000 0.530600 -0.000000 0.000000 1.000000 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                      </node>
+                    </node>
+                  </node>
+                </node>
+              </node>
+            </node>
+            <node id="tail1" name="tail1" sid="tail1" type="JOINT">
+              <matrix sid="matrix">-1.000000 -0.000001 -0.000001 0.000000 -0.000000 0.823169 -0.567796 0.764900 0.000002 -0.567796 -0.823169 0.335500 0.000000 0.000000 0.000000 1.000000</matrix>
+              <node id="tail2" name="tail2" sid="tail2" type="JOINT">
+                <matrix sid="matrix">1.000000 -0.000000 -0.000000 -0.000000 0.000000 0.852701 -0.522399 1.075200 0.000000 0.522399 0.852701 -0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                <node id="tail3" name="tail3" sid="tail3" type="JOINT">
+                  <matrix sid="matrix">0.998615 -0.010233 -0.051614 0.000000 0.041530 0.755619 0.653694 0.891400 0.032311 -0.654931 0.754997 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                  <node id="tail3_end" name="tail3_end" sid="tail3_end" type="JOINT">
+                    <matrix sid="matrix">1.000000 0.000000 -0.000000 -0.000000 -0.000000 1.000000 0.000000 0.813600 0.000000 0.000000 1.000000 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+                  </node>
+                </node>
+              </node>
+            </node>
+          </node>
+        </node>
+      </node>
+    </visual_scene>
+  </library_visual_scenes>
+  <scene>
+    <instance_visual_scene url="#RootNode"/>
+  </scene>
+</COLLADA>
