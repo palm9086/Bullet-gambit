@@ -924,15 +924,21 @@ int main()
 						chairModel->Draw(ourShader);
 
 						// Draw player models on the chairs (use sitting animation model)
-						// Seat mapping: left seat -> Player1, right seat -> Player2 (fixed)
+						// Seat mapping: left seat follows the active player (self button side),
+						// right seat shows the opponent (foe button side).
 						Model* leftPlayerModel = nullptr;
 						Model* rightPlayerModel = nullptr;
 						// Prefer sitting animation; if missing use wave as fallback then main
 						Model* sittingFallback = playerSitting ? playerSitting : (playerWave ? playerWave : playerModelMain);
 						Model* genericFallback = playerModelMain ? playerModelMain : (playerWave ? playerWave : playerSitting);
-						// Use explicit player instances if available so each can have its own palette
-						leftPlayerModel = playerModelP1 ? playerModelP1 : sittingFallback;
-						rightPlayerModel = playerModelP2 ? playerModelP2 : genericFallback;
+						// Pick seat occupants based on whose turn it is
+						bool p1Active = player1Turn;
+						Model* currentModel = p1Active ? playerModelP1 : playerModelP2;
+						Model* opponentModel = p1Active ? playerModelP2 : playerModelP1;
+						leftPlayerModel = currentModel ? currentModel : sittingFallback;
+						rightPlayerModel = opponentModel ? opponentModel : genericFallback;
+						int leftPalette = p1Active ? selectedPaletteP1 : selectedPaletteP2;
+						int rightPalette = p1Active ? selectedPaletteP2 : selectedPaletteP1;
 
 						// Update animator (if present) and upload final bone matrices to shader
 						if (playerAnimator) {
@@ -955,17 +961,16 @@ int main()
 							m = glm::scale(m, glm::vec3(4.0f));
 							ourShader.setMat4("model", m);
 
-							// Player1 uses selectedPaletteP1
-							int leftPalette = selectedPaletteP1 >= 0 ? selectedPaletteP1 : 0;
-
-							if (leftPalette >= 0 && leftPalette < 4 && paletteTextures[leftPalette] != 0) {
+							// Active player uses the palette tied to their seat
+							int leftPaletteSafe = (leftPalette >= 0 && leftPalette < 4) ? leftPalette : 0;
+							if (paletteTextures[leftPaletteSafe] != 0) {
 								ourShader.setBool("usePalette", true);
 								ourShader.setBool("flipPaletteHoriz", true); // horizontal flip only
 								// Use a high, dedicated texture unit for palette to avoid
 								// Mesh::Draw binding diffuse/specular textures into low units.
 								const int PALETTE_TEX_UNIT = 15; // GL_TEXTURE0 +15
 								glActiveTexture(GL_TEXTURE0 + PALETTE_TEX_UNIT);
-								glBindTexture(GL_TEXTURE_2D, paletteTextures[leftPalette]);
+								glBindTexture(GL_TEXTURE_2D, paletteTextures[leftPaletteSafe]);
 								ourShader.setInt("paletteTex", PALETTE_TEX_UNIT);
 							}
 							else {
@@ -989,15 +994,15 @@ int main()
 							m = glm::scale(m, glm::vec3(4.0f));
 							ourShader.setMat4("model", m);
 
-							int rightPalette = selectedPaletteP2 >= 0 ? selectedPaletteP2 : 1;
-							if (rightPalette >= 0 && rightPalette < 4 && paletteTextures[rightPalette] != 0) {
+							int rightPaletteSafe = (rightPalette >= 0 && rightPalette < 4) ? rightPalette : 1;
+							if (paletteTextures[rightPaletteSafe] != 0) {
 								ourShader.setBool("usePalette", true);
 								ourShader.setBool("flipPaletteHoriz", true);
 								// Use a high, dedicated texture unit for palette to avoid
 								// Mesh::Draw binding diffuse/specular textures into low units.
 								const int PALETTE_TEX_UNIT = 15;
 								glActiveTexture(GL_TEXTURE0 + PALETTE_TEX_UNIT);
-								glBindTexture(GL_TEXTURE_2D, paletteTextures[rightPalette]);
+								glBindTexture(GL_TEXTURE_2D, paletteTextures[rightPaletteSafe]);
 								ourShader.setInt("paletteTex", PALETTE_TEX_UNIT);
 							}
 							else {
@@ -1010,6 +1015,8 @@ int main()
 							ourShader.setBool("usePalette", false);
 							glActiveTexture(GL_TEXTURE0 + 15);
 							glBindTexture(GL_TEXTURE_2D, 0);
+							// Restore default texture unit so later UI renders bind to GL_TEXTURE0
+							glActiveTexture(GL_TEXTURE0);
 						}
 					}
 				}
@@ -1087,6 +1094,9 @@ int main()
 			}
 
 			// 2D UI Rendering
+			// Ensure UI uses the default texture unit (player palette binding uses unit 15)
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, 0);
 			glDisable(GL_DEPTH_TEST);
 			if (menuShader) menuShader->use();
 			float elapsed = (float)glfwGetTime() - statusImageTime;
