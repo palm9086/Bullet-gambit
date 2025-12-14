@@ -66,16 +66,20 @@ unsigned int itemDescriptionPanelTex = 0;
 unsigned int slot1Tex = 0, slot2Tex = 0, slot3Tex = 0, slot4Tex = 0;
 unsigned int restartButtonTex = 0;
 
-// New player/character assets
+// Player/NecoArc models removed to avoid loading/rendering issues.
+// Palette textures remain available for UI (set to0 if not used).
+unsigned int paletteTextures[4] = {0,0,0,0 };
+int selectedPaletteP1 =0; // default palette0
+int selectedPaletteP2 =0; // default palette0
+
+// Keep model pointers declared but models are disabled elsewhere
 Model* playerModelMain = nullptr;
 Model* playerSitting = nullptr;
 Model* playerWave = nullptr;
 Model* playerDying = nullptr;
-Model* playerModelP1 = nullptr; // New: separate instance for Player1
-Model* playerModelP2 = nullptr; // New: separate instance for Player2
-unsigned int paletteTextures[4] = { 0,0,0,0 };
-int selectedPaletteP1 = 0; // default palette0
-int selectedPaletteP2 = 0; // default palette0
+Model* playerModelP1 = nullptr;
+Model* playerModelP2 = nullptr;
+
 // Store texture pixel sizes to preserve aspect ratios
 std::unordered_map<unsigned int, glm::vec2> textureSizes;
 
@@ -119,10 +123,6 @@ std::vector<ItemType> player2Items;
 // New selection state tracking for character select
 int charSelectingPlayer = 1; //1 = player1 choosing,2 = player2 choosing
 int selectedPalette = -1;
-
-// New animation objects for player models
-Animation* playerAnimation = nullptr;
-Animator* playerAnimator = nullptr;
 
 // --- Function Prototypes ---
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -680,30 +680,25 @@ int main()
 	chairModel = loadModelWithFlip("resources/objects/tableset/chair.dae", "Chair Model");
 
 	// Load palette textures and player models
-	paletteTextures[0] = loadTexture("resources/objects/necoarc/Neco_Arc_Palette.png.001.png", true);
-	paletteTextures[1] = loadTexture("resources/objects/necoarc/Neco_Arc_Palette.png.002.png", true);
-	paletteTextures[2] = loadTexture("resources/objects/necoarc/Neco_Arc_Palette.png.003.png", true);
-	paletteTextures[3] = loadTexture("resources/objects/necoarc/Neco_Arc_Palette.png.004.png", true);
+	// Load palettes (optional) and two instances of the NecoArc model for left/right
+	paletteTextures[0] = loadTexture("resources/objects/necoarc/Neco_Arc_Palette1.png", true);
+	paletteTextures[1] = loadTexture("resources/objects/necoarc/Neco_Arc_Palette2.png", true);
+	paletteTextures[2] = loadTexture("resources/objects/necoarc/Neco_Arc_Palette3.png", true);
+	paletteTextures[3] = loadTexture("resources/objects/necoarc/Neco_Arc_Palette4.png", true);
 
-	playerModelMain = loadModelWithFlip("resources/objects/necoarc/untitled.dae", "NecoArc Main");
-	playerSitting = loadModelWithFlip("resources/objects/necoarc/Sitting Talking.dae", "NecoArc Sitting");
-	playerWave = loadModelWithFlip("resources/objects/necoarc/Slide Hip Hop Dance.dae", "NecoArc Wave");
-	playerDying = loadModelWithFlip("resources/objects/necoarc/Death From Front Headshot.dae", "NecoArc Dying");
-
-	// Load two separate instances of the main model for Player1 and Player2 so each can have its own palette
 	playerModelP1 = loadModelWithFlip("resources/objects/necoarc/untitled.dae", "NecoArc P1");
 	playerModelP2 = loadModelWithFlip("resources/objects/necoarc/untitled.dae", "NecoArc P2");
 
-	// Debug: report model load details for Neco
-	if (playerModelMain) {
-		std::cout << "Neco model loaded. Mesh count: " << playerModelMain->meshes.size()
-			<< ", loaded texture count: " << playerModelMain->textures_loaded.size() << std::endl;
-		for (size_t ti = 0; ti < playerModelMain->textures_loaded.size(); ++ti) {
-			std::cout << " Texture[" << ti << "] path: " << playerModelMain->textures_loaded[ti].path << std::endl;
+	// Debug: report model load details for Neco (use P1 as representative)
+	if (playerModelP1) {
+		std::cout << "Neco model (P1) loaded. Mesh count: " << playerModelP1->meshes.size()
+			<< ", loaded texture count: " << playerModelP1->textures_loaded.size() << std::endl;
+		for (size_t ti =0; ti < playerModelP1->textures_loaded.size(); ++ti) {
+			std::cout << " Texture[" << ti << "] path: " << playerModelP1->textures_loaded[ti].path << std::endl;
 		}
 	}
 	else {
-		std::cerr << "Neco model failed to load (playerModelMain is nullptr)." << std::endl;
+		std::cerr << "Neco model (P1) failed to load (playerModelP1 is nullptr)." << std::endl;
 	}
 
 	// Load Textures
@@ -762,7 +757,7 @@ int main()
 			if (menuShader) menuShader->setVec2("offset", glm::vec2(0.0f, 0.0f));
 			if (menuShader) menuShader->setVec2("scale", glm::vec2(1.0f, 1.0f));
 			if (menuShader) menuShader->setVec3("color", glm::vec3(0.0f, 0.0f, 0.1f));
-			renderQuad();
+			renderQuad(0.0f,1.0f);
 			for (const auto& button : activeButtons)
 			{
 				if (menuShader) menuShader->setVec2("offset", button.position);
@@ -781,7 +776,7 @@ int main()
 						if (selectedPaletteP1 == idx) color = glm::vec3(0.4f, 1.0f, 0.4f);
 						if (selectedPaletteP2 == idx) color = glm::vec3(0.4f, 0.4f, 1.0f);
 						if (menuShader) menuShader->setVec3("color", color);
-						renderQuad();
+						renderQuad(0.0f,1.0f);
 						continue;
 					}
 					if (button.actionCode >= 30 && button.actionCode < 34) {
@@ -790,12 +785,12 @@ int main()
 						if (selectedPaletteP2 == idx) color = glm::vec3(0.4f, 0.4f, 1.0f);
 						if (selectedPaletteP1 == idx) color = glm::vec3(0.4f, 1.0f, 0.4f);
 						if (menuShader) menuShader->setVec3("color", color);
-						renderQuad();
+						renderQuad(0.0f,1.0f);
 						continue;
 					}
 				}
 				if (menuShader) menuShader->setVec3("color", button.color);
-				renderQuad();
+				renderQuad(0.0f,1.0f);
 			}
 		}
 		else if (currentGameState == STATE_CREDITS)
@@ -894,131 +889,66 @@ int main()
 					ourShader.setMat4("model", model);
 					gunModel->Draw(ourShader);
 
-					// Render table and two chairs (if loaded) placed under the gun
-					if (tableModel) {
-						glm::mat4 modelTable = glm::mat4(1.0f);
-						// Position table directly below the gun (gun at origin)
-						modelTable = glm::translate(modelTable, glm::vec3(0.0f, -1.0f, 0.0f));
-						// Rotate -90 degrees around X axis as requested
-						modelTable = glm::rotate(modelTable, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-						// Keep the table small
-						modelTable = glm::scale(modelTable, glm::vec3(0.35f));
-						ourShader.setMat4("model", modelTable);
-						tableModel->Draw(ourShader);
+					// Draw two NecoArc models next to the gun (left and right)
+				// Ensure shader has valid bone matrices even if animator is not used (upload identity matrices)
+				{
+					const int MAX_BONES =100;
+					for (int bi =0; bi < MAX_BONES; ++bi) {
+						std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+						ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
 					}
-					if (chairModel) {
-						// Left chair: moved up slightly, moved back on Z, and scaled down
-						glm::mat4 modelChairLeft = glm::mat4(1.0f);
-						modelChairLeft = glm::translate(modelChairLeft, glm::vec3(-1.5f, -0.3f, -0.5f)); // moved back on Z
-						modelChairLeft = glm::rotate(modelChairLeft, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-						modelChairLeft = glm::scale(modelChairLeft, glm::vec3(0.2f)); // smaller
-						ourShader.setMat4("model", modelChairLeft);
-						chairModel->Draw(ourShader);
+				}
+				if (playerModelP1) {
+					glm::mat4 mLeft = glm::mat4(1.0f);
+					// position left of gun and slightly down to match seating height
+					mLeft = glm::translate(mLeft, glm::vec3(-1.2f, -0.15f, -0.5f));
+					mLeft = glm::rotate(mLeft, glm::radians(-90.0f), glm::vec3(0.0f,1.0f,0.0f));
+					mLeft = glm::scale(mLeft, glm::vec3(0.6f));
+					ourShader.setMat4("model", mLeft);
+					ourShader.setBool("usePalette", false);
+					playerModelP1->Draw(ourShader);
+				}
+				if (playerModelP2) {
+					glm::mat4 mRight = glm::mat4(1.0f);
+					// position right of gun
+					mRight = glm::translate(mRight, glm::vec3(1.2f, -0.15f, -0.5f));
+					mRight = glm::rotate(mRight, glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f));
+					mRight = glm::scale(mRight, glm::vec3(0.6f));
+					ourShader.setMat4("model", mRight);
+					ourShader.setBool("usePalette", false);
+					playerModelP2->Draw(ourShader);
+				}
+				}
 
-						// Right chair: moved up slightly, moved back on Z, and scaled down
-						glm::mat4 modelChairRight = glm::mat4(1.0f);
-						modelChairRight = glm::translate(modelChairRight, glm::vec3(1.5f, -0.3f, -0.5f)); // moved back on Z
-						modelChairRight = glm::rotate(modelChairRight, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-						modelChairRight = glm::scale(modelChairRight, glm::vec3(0.2f)); // smaller
-						ourShader.setMat4("model", modelChairRight);
-						chairModel->Draw(ourShader);
+				// Render table and two chairs (if loaded) placed under the gun
+				if (tableModel) {
+					glm::mat4 modelTable = glm::mat4(1.0f);
+					// Position table directly below the gun (gun at origin)
+					modelTable = glm::translate(modelTable, glm::vec3(0.0f, -1.0f, 0.0f));
+					// Rotate -90 degrees around X axis as requested
+					modelTable = glm::rotate(modelTable, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+					// Keep the table small
+					modelTable = glm::scale(modelTable, glm::vec3(0.35f));
+					ourShader.setMat4("model", modelTable);
+					tableModel->Draw(ourShader);
+				}
+				if (chairModel) {
+					// Left chair: moved up slightly, moved back on Z, and scaled down
+					glm::mat4 modelChairLeft = glm::mat4(1.0f);
+					modelChairLeft = glm::translate(modelChairLeft, glm::vec3(-1.5f, -0.3f, -0.5f)); // moved back on Z
+					modelChairLeft = glm::rotate(modelChairLeft, glm::radians(-90.0f), glm::vec3(0.0f,1.0f,0.0f));
+					modelChairLeft = glm::scale(modelChairLeft, glm::vec3(0.2f)); // smaller
+				
+					ourShader.setMat4("model", modelChairLeft);
+					chairModel->Draw(ourShader);
 
-						// Draw player models on the chairs (use sitting animation model)
-						// Seat mapping: left seat follows the active player (self button side),
-						// right seat shows the opponent (foe button side).
-						Model* leftPlayerModel = nullptr;
-						Model* rightPlayerModel = nullptr;
-						// Prefer sitting animation; if missing use wave as fallback then main
-						Model* sittingFallback = playerSitting ? playerSitting : (playerWave ? playerWave : playerModelMain);
-						Model* genericFallback = playerModelMain ? playerModelMain : (playerWave ? playerWave : playerSitting);
-						// Pick seat occupants based on whose turn it is
-						bool p1Active = player1Turn;
-						Model* currentModel = p1Active ? playerModelP1 : playerModelP2;
-						Model* opponentModel = p1Active ? playerModelP2 : playerModelP1;
-						leftPlayerModel = currentModel ? currentModel : sittingFallback;
-						rightPlayerModel = opponentModel ? opponentModel : genericFallback;
-						int leftPalette = p1Active ? selectedPaletteP1 : selectedPaletteP2;
-						int rightPalette = p1Active ? selectedPaletteP2 : selectedPaletteP1;
-
-						// Update animator (if present) and upload final bone matrices to shader
-						if (playerAnimator) {
-							playerAnimator->UpdateAnimation(deltaTime);
-							auto mats = playerAnimator->GetFinalBoneMatrices();
-							for (size_t i = 0; i < mats.size(); ++i) {
-								std::string name = "finalBonesMatrices[" + std::to_string(i) + "]";
-								ourShader.setMat4(name.c_str(), mats[i]);
-							}
-						}
-
-						// Left player draw (slightly offset and scaled)
-						if (leftPlayerModel) {
-							glm::mat4 m = glm::mat4(1.0f);
-							// Position the model to sit on the chair (match chair translation and raise to seat level)
-							m = glm::translate(m, glm::vec3(-1.5f, -0.05f, -0.5f)); // raised slightly to sit on chair
-							m = glm::rotate(m, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-							// Increase scale to make the main model more visible on the chair
-							// Make the character much larger so it's clearly visible
-							m = glm::scale(m, glm::vec3(4.0f));
-							ourShader.setMat4("model", m);
-
-							// Active player uses the palette tied to their seat
-							int leftPaletteSafe = (leftPalette >= 0 && leftPalette < 4) ? leftPalette : 0;
-							if (paletteTextures[leftPaletteSafe] != 0) {
-								ourShader.setBool("usePalette", true);
-								ourShader.setBool("flipPaletteHoriz", true); // horizontal flip only
-								// Use a high, dedicated texture unit for palette to avoid
-								// Mesh::Draw binding diffuse/specular textures into low units.
-								const int PALETTE_TEX_UNIT = 15; // GL_TEXTURE0 +15
-								glActiveTexture(GL_TEXTURE0 + PALETTE_TEX_UNIT);
-								glBindTexture(GL_TEXTURE_2D, paletteTextures[leftPaletteSafe]);
-								ourShader.setInt("paletteTex", PALETTE_TEX_UNIT);
-							}
-							else {
-								ourShader.setBool("usePalette", false);
-							}
-
-							leftPlayerModel->Draw(ourShader);
-
-							ourShader.setBool("usePalette", false);
-							// Unbind the palette texture unit
-							glActiveTexture(GL_TEXTURE0 + 15);
-							glBindTexture(GL_TEXTURE_2D, 0);
-						}
-						// Right player draw
-						if (rightPlayerModel) {
-							glm::mat4 m = glm::mat4(1.0f);
-							// Position the model to sit on the chair (match chair translation and raise to seat level)
-							m = glm::translate(m, glm::vec3(1.5f, -0.05f, -0.5f)); // moved up to sit on chair
-							m = glm::rotate(m, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-							// Use same increased scale as left player for consistency
-							m = glm::scale(m, glm::vec3(4.0f));
-							ourShader.setMat4("model", m);
-
-							int rightPaletteSafe = (rightPalette >= 0 && rightPalette < 4) ? rightPalette : 1;
-							if (paletteTextures[rightPaletteSafe] != 0) {
-								ourShader.setBool("usePalette", true);
-								ourShader.setBool("flipPaletteHoriz", true);
-								// Use a high, dedicated texture unit for palette to avoid
-								// Mesh::Draw binding diffuse/specular textures into low units.
-								const int PALETTE_TEX_UNIT = 15;
-								glActiveTexture(GL_TEXTURE0 + PALETTE_TEX_UNIT);
-								glBindTexture(GL_TEXTURE_2D, paletteTextures[rightPaletteSafe]);
-								ourShader.setInt("paletteTex", PALETTE_TEX_UNIT);
-							}
-							else {
-								ourShader.setBool("usePalette", false);
-							}
-
-							rightPlayerModel->Draw(ourShader);
-
-							// Reset palette binding and flags
-							ourShader.setBool("usePalette", false);
-							glActiveTexture(GL_TEXTURE0 + 15);
-							glBindTexture(GL_TEXTURE_2D, 0);
-							// Restore default texture unit so later UI renders bind to GL_TEXTURE0
-							glActiveTexture(GL_TEXTURE0);
-						}
-					}
+					// Right chair: moved up slightly, moved back on Z, and scaled down
+					glm::mat4 modelChairRight = glm::mat4(1.0f);
+					modelChairRight = glm::translate(modelChairRight, glm::vec3(1.5f, -0.3f, -0.5f)); // moved back on Z
+					modelChairRight = glm::rotate(modelChairRight, glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f));
+					modelChairRight = glm::scale(modelChairRight, glm::vec3(0.2f)); // smaller
+					ourShader.setMat4("model", modelChairRight);
+					chairModel->Draw(ourShader);
 				}
 
 				// --- ITEM MODEL RENDERING WITH CUSTOM SCALING AND TRANSLATION ---
@@ -1158,11 +1088,11 @@ int main()
 					// Append item list and action guide when player can act
 					std::string itemStatus = player1Turn ? "P1 Items: " : "P2 Items: ";
 					auto& items = player1Turn ? player1Items : player2Items;
-					for (int i = 0; i < 4; ++i) {
+					for (int i =0; i <4; ++i) {
 						if (i < (int)items.size())
-							itemStatus += "[" + std::to_string(i + 1) + ":" + itemName(items[i]) + "] ";
+							itemStatus += "[" + std::to_string(i +1) + ":" + itemName(items[i]) + "] ";
 						else
-							itemStatus += "[" + std::to_string(i + 1) + ":Empty] ";
+							itemStatus += "[" + std::to_string(i +1) + ":Empty] ";
 					}
 					baseTitle += " | " + itemStatus;
 					baseTitle += "| Action: Click Safe/Foe Buttons |1-4: Use Item | R: Restart";
@@ -1185,13 +1115,13 @@ int main()
 				glBindTexture(GL_TEXTURE_2D, currentStatusTex);
 				if (menuShader) menuShader->setVec3("color", glm::vec3(1.0f, 1.0f, 1.0f));
 				if (menuShader) menuShader->setFloat("alpha", alpha);
-				renderQuad();
+				renderQuad(0.0f,1.0f);
 			}
 
 			// Draw all2D UI elements
 			if (menuShader) menuShader->setFloat("alpha", 1.0f);
 			for (const auto& button : activeButtons) {
-				bool showButton = false;
+			 bool showButton = false;
 				glm::vec3 finalColor = button.color;
 
 				// Determine visibility based on game state
@@ -1255,7 +1185,7 @@ int main()
 				}
 				else {
 					// Render normal buttons (Safe, Foe, Back, Description, Menu buttons)
-					renderQuad();
+					renderQuad(0.0f,1.0f);
 				}
 			}
 
@@ -1275,7 +1205,7 @@ int main()
 				if (menuShader) menuShader->setVec2("scale", restartBtn.size);
 				glBindTexture(GL_TEXTURE_2D, restartButtonTex);
 				if (menuShader) menuShader->setVec3("color", restartBtn.color);
-				renderQuad();
+				renderQuad(0.0f,1.0f);
 			}
 
 			// Draw Item Description Panel (if active)
@@ -1290,7 +1220,7 @@ int main()
 				if (menuShader) menuShader->setVec2("scale", glm::vec2(panelW_Norm, panelH_Norm));
 				glBindTexture(GL_TEXTURE_2D, itemDescriptionPanelTex);
 				if (menuShader) menuShader->setVec3("color", glm::vec3(1.0f, 1.0f, 1.0f));
-				renderQuad();
+				renderQuad(0.0f,1.0f);
 			}
 
 			glEnable(GL_DEPTH_TEST);
@@ -1307,14 +1237,9 @@ int main()
 	if (itemModelMove) { delete itemModelMove; itemModelMove = nullptr; }
 	if (tableModel) { delete tableModel; tableModel = nullptr; }
 	if (chairModel) { delete chairModel; chairModel = nullptr; }
-	if (playerModelMain) { delete playerModelMain; playerModelMain = nullptr; }
-	if (playerSitting) { delete playerSitting; playerSitting = nullptr; }
-	if (playerWave) { delete playerWave; playerWave = nullptr; }
-	if (playerDying) { delete playerDying; playerDying = nullptr; }
+	// Delete NecoArc models if loaded
 	if (playerModelP1) { delete playerModelP1; playerModelP1 = nullptr; }
 	if (playerModelP2) { delete playerModelP2; playerModelP2 = nullptr; }
-	if (playerAnimation) { delete playerAnimation; playerAnimation = nullptr; }
-	if (playerAnimator) { delete playerAnimator; playerAnimator = nullptr; }
 	// --- END FIXED MODEL DELETION ---
 
 	glfwTerminate();
@@ -1370,7 +1295,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 					selectedPaletteP1 = btn.actionCode - 20;
 					std::cout << "Player1 selected palette " << selectedPaletteP1 << std::endl;
 					return;
-				}
+					}
 				if (btn.actionCode >= 30 && btn.actionCode < 34) {
 					selectedPaletteP2 = btn.actionCode - 30;
 					std::cout << "Player2 selected palette " << selectedPaletteP2 << std::endl;
@@ -1458,7 +1383,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 		}
 		else if (currentStatusTex == player1GotTex || currentStatusTex == player2GotTex) {
 			currentStatusTex = (currentStatusTex == player1GotTex) ? player2WonTex : player1WonTex;
-			statusImageTime = 0.0f; turnIndicatorSkippedManually = true; return;
-		}
+			statusImageTime =0.0f; turnIndicatorSkippedManually = true; return;
+			}
 	}
 }
