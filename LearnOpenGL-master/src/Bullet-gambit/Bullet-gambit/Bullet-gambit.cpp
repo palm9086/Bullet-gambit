@@ -68,9 +68,9 @@ unsigned int restartButtonTex = 0;
 
 // Player/NecoArc models removed to avoid loading/rendering issues.
 // Palette textures remain available for UI (set to0 if not used).
-unsigned int paletteTextures[4] = {0,0,0,0 };
-int selectedPaletteP1 =0; // default palette0
-int selectedPaletteP2 =0; // default palette0
+unsigned int paletteTextures[4] = { 0,0,0,0 };
+int selectedPaletteP1 = 0; // default palette0
+int selectedPaletteP2 = 0; // default palette0
 
 // Keep model pointers declared but models are disabled elsewhere
 Model* playerModelMain = nullptr;
@@ -82,6 +82,9 @@ Model* playerModelP2 = nullptr;
 
 // Store texture pixel sizes to preserve aspect ratios
 std::unordered_map<unsigned int, glm::vec2> textureSizes;
+
+// Small optimization: single global constant for bone matrix uploads
+const int MAX_BONES = 100;
 
 std::vector<MenuButton> activeButtons;
 unsigned int quadVAO = 0;
@@ -123,6 +126,14 @@ std::vector<ItemType> player2Items;
 // New selection state tracking for character select
 int charSelectingPlayer = 1; //1 = player1 choosing,2 = player2 choosing
 int selectedPalette = -1;
+
+// New animation objects for player models
+Animation* sitAnimation = nullptr;
+Animation* danceAnimation = nullptr;
+Animation* deathAnimation = nullptr;
+Animator* animatorP1 = nullptr;
+Animator* animatorP2 = nullptr;
+int lastWinner = 0; //0 = none,1 = player1,2 = player2
 
 // --- Function Prototypes ---
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -218,6 +229,7 @@ void getItemUVs(ItemType type, float& vStart, float& vEnd)
 		vStart = 0.0f; vEnd = 0.25f; break;
 	}
 }
+
 
 
 // Callback implementations
@@ -342,11 +354,28 @@ void startGameInit()
 	currentChamber = 0;
 	player1Turn = true;
 	gameOver = false;
+	lastWinner = 0;
 	player1Items.clear();
 	player2Items.clear();
 	lastActionTime = (float)glfwGetTime();
 	turnIndicatorSkippedManually = false;
 	showItemDescription = false;
+
+	// Reset animators to sitting animation when a new game begins
+	if (animatorP1 && sitAnimation) {
+		animatorP1->m_CurrentAnimation = sitAnimation;
+		animatorP1->m_CurrentTime = 0.0f;
+		animatorP1->m_CurrentAnimation2 = nullptr;
+		animatorP1->m_CurrentTime2 = 0.0f;
+		animatorP1->m_blendAmount = 0.0f;
+	}
+	if (animatorP2 && sitAnimation) {
+		animatorP2->m_CurrentAnimation = sitAnimation;
+		animatorP2->m_CurrentTime = 0.0f;
+		animatorP2->m_CurrentAnimation2 = nullptr;
+		animatorP2->m_CurrentTime2 = 0.0f;
+		animatorP2->m_blendAmount = 0.0f;
+	}
 
 	giveRandomItem(true);
 	giveRandomItem(false);
@@ -367,7 +396,6 @@ void handleGameAction(int action)
 	bool fired = chamber[currentChamber];
 	currentChamber = (currentChamber + 1) % 6;
 	bool turnSwitched = false;
-	//1. Instant Rotation to the target for visual feedback of the shot (REMOVED)
 
 	//2. Resolve the shot
 	if (action == 1) // Shoot Opponent (Foe button)
@@ -377,6 +405,23 @@ void handleGameAction(int action)
 			currentStatusTex = player1Turn ? player2GotTex : player1GotTex;
 			gameMessage = player1Turn ? "P1 shot P2 - P1 Wins!" : "P2 shot P1 - P2 Wins!";
 			gameOver = true;
+			// Determine winner: if it was player1's turn when shot succeeded, player1 is the winner
+			lastWinner = player1Turn ? 1 : 2;
+			// Play winner/loser animations -> REPLACED: set both animators to sitting animation to avoid dance/death.
+			if (animatorP1 && sitAnimation) {
+				animatorP1->m_CurrentAnimation = sitAnimation;
+				animatorP1->m_CurrentTime = 0.0f;
+				animatorP1->m_CurrentAnimation2 = nullptr;
+				animatorP1->m_CurrentTime2 = 0.0f;
+				animatorP1->m_blendAmount = 0.0f;
+			}
+			if (animatorP2 && sitAnimation) {
+				animatorP2->m_CurrentAnimation = sitAnimation;
+				animatorP2->m_CurrentTime = 0.0f;
+				animatorP2->m_CurrentAnimation2 = nullptr;
+				animatorP2->m_CurrentTime2 = 0.0f;
+				animatorP2->m_blendAmount = 0.0f;
+			}
 		}
 		else
 		{
@@ -393,6 +438,23 @@ void handleGameAction(int action)
 			currentStatusTex = player1Turn ? player1GotTex : player2GotTex;
 			gameMessage = player1Turn ? "P1 shot self - P2 Wins!" : "P2 shot self - P1 Wins!";
 			gameOver = true;
+			// If player shot self, the opponent wins
+			lastWinner = player1Turn ? 2 : 1;
+			// Play winner/loser animations -> REPLACED: set both animators to sitting animation to avoid dance/death.
+			if (animatorP1 && sitAnimation) {
+				animatorP1->m_CurrentAnimation = sitAnimation;
+				animatorP1->m_CurrentTime = 0.0f;
+				animatorP1->m_CurrentAnimation2 = nullptr;
+				animatorP1->m_CurrentTime2 = 0.0f;
+				animatorP1->m_blendAmount = 0.0f;
+			}
+			if (animatorP2 && sitAnimation) {
+				animatorP2->m_CurrentAnimation = sitAnimation;
+				animatorP2->m_CurrentTime = 0.0f;
+				animatorP2->m_CurrentAnimation2 = nullptr;
+				animatorP2->m_CurrentTime2 = 0.0f;
+				animatorP2->m_blendAmount = 0.0f;
+			}
 		}
 		else
 		{
@@ -404,11 +466,10 @@ void handleGameAction(int action)
 		}
 	}
 
-	//3. After resolution (if turn switched or game over), instantly reset the rotation to the Foe/Neutral state (0 degrees).
-
 	updateHUD();
 }
 
+// MODIFIED: Removal of duplicated local MAX_BONES definition
 // --- OpenGL/Utility Functions ---
 unsigned int loadTexture(const char* path, bool flip)
 {
@@ -689,11 +750,21 @@ int main()
 	playerModelP1 = loadModelWithFlip("resources/objects/necoarc/untitled.dae", "NecoArc P1");
 	playerModelP2 = loadModelWithFlip("resources/objects/necoarc/untitled.dae", "NecoArc P2");
 
+	// Load animations (use same model reference for bone mappings)
+	if (playerModelP1) {
+		sitAnimation = new Animation(FileSystem::getPath("resources/objects/necoarc/Sitting Talking.dae"), playerModelP1);
+		danceAnimation = new Animation(FileSystem::getPath("resources/objects/necoarc/Slide Hip Hop Dance.dae"), playerModelP1);
+		deathAnimation = new Animation(FileSystem::getPath("resources/objects/necoarc/Death From Front Headshot.dae"), playerModelP1);
+		// Create per-player animators and start with sitting animation
+		animatorP1 = new Animator(sitAnimation);
+		animatorP2 = new Animator(sitAnimation);
+	}
+
 	// Debug: report model load details for Neco (use P1 as representative)
 	if (playerModelP1) {
 		std::cout << "Neco model (P1) loaded. Mesh count: " << playerModelP1->meshes.size()
 			<< ", loaded texture count: " << playerModelP1->textures_loaded.size() << std::endl;
-		for (size_t ti =0; ti < playerModelP1->textures_loaded.size(); ++ti) {
+		for (size_t ti = 0; ti < playerModelP1->textures_loaded.size(); ++ti) {
 			std::cout << " Texture[" << ti << "] path: " << playerModelP1->textures_loaded[ti].path << std::endl;
 		}
 	}
@@ -757,7 +828,7 @@ int main()
 			if (menuShader) menuShader->setVec2("offset", glm::vec2(0.0f, 0.0f));
 			if (menuShader) menuShader->setVec2("scale", glm::vec2(1.0f, 1.0f));
 			if (menuShader) menuShader->setVec3("color", glm::vec3(0.0f, 0.0f, 0.1f));
-			renderQuad(0.0f,1.0f);
+			renderQuad(0.0f, 1.0f);
 			for (const auto& button : activeButtons)
 			{
 				if (menuShader) menuShader->setVec2("offset", button.position);
@@ -776,7 +847,7 @@ int main()
 						if (selectedPaletteP1 == idx) color = glm::vec3(0.4f, 1.0f, 0.4f);
 						if (selectedPaletteP2 == idx) color = glm::vec3(0.4f, 0.4f, 1.0f);
 						if (menuShader) menuShader->setVec3("color", color);
-						renderQuad(0.0f,1.0f);
+						renderQuad(0.0f, 1.0f);
 						continue;
 					}
 					if (button.actionCode >= 30 && button.actionCode < 34) {
@@ -785,12 +856,12 @@ int main()
 						if (selectedPaletteP2 == idx) color = glm::vec3(0.4f, 0.4f, 1.0f);
 						if (selectedPaletteP1 == idx) color = glm::vec3(0.4f, 1.0f, 0.4f);
 						if (menuShader) menuShader->setVec3("color", color);
-						renderQuad(0.0f,1.0f);
+						renderQuad(0.0f, 1.0f);
 						continue;
 					}
 				}
 				if (menuShader) menuShader->setVec3("color", button.color);
-				renderQuad(0.0f,1.0f);
+				renderQuad(0.0f, 1.0f);
 			}
 		}
 		else if (currentGameState == STATE_CREDITS)
@@ -803,12 +874,12 @@ int main()
 		{
 			bool inCooldown = ((float)glfwGetTime() - lastActionTime < MIN_TURN_DELAY);
 
-			// 3D Rendering (Gun Model)
+			//3D Rendering (Gun Model)
 			glEnable(GL_DEPTH_TEST);
 			// CRITICAL CHECK: Ensure shader is valid before using it
 			if (ourShader.ID == 0) {
-				// Skip 3D rendering if the main shader is invalid
-				std::cerr << "Warning: Main shader is invalid. Skipping 3D rendering."
+				// Skip3D rendering if the main shader is invalid
+				std::cerr << "Warning: Main shader is invalid. Skipping3D rendering."
 					<< std::endl;
 			}
 			else {
@@ -890,63 +961,140 @@ int main()
 					gunModel->Draw(ourShader);
 
 					// Draw two NecoArc models next to the gun (left and right)
-				// Ensure shader has valid bone matrices even if animator is not used (upload identity matrices)
-				{
-					const int MAX_BONES =100;
-					for (int bi =0; bi < MAX_BONES; ++bi) {
-						std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
-						ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
+				// Ensure we update animators and upload bone matrices per-player before drawing
+					if (playerModelP1) {
+						// Update animator for P1
+						if (animatorP1) animatorP1->UpdateAnimation(deltaTime);
+						// Upload bone matrices for P1 (use animator if present)
+						const int MAX_BONES = 100;
+						if (animatorP1) {
+							auto mats = animatorP1->GetFinalBoneMatrices();
+							for (size_t bi = 0; bi < mats.size() && bi < MAX_BONES; ++bi) {
+								std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+								ourShader.setMat4(name.c_str(), mats[bi]);
+							}
+							// fill rest with identity
+							for (size_t bi = mats.size(); bi < MAX_BONES; ++bi) {
+								std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+								ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
+							}
+						}
+						else {
+							for (int bi = 0; bi < MAX_BONES; ++bi) {
+								std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+								ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
+							}
+						}
+
+						glm::mat4 mLeft = glm::mat4(1.0f);
+						// position left player to sit on left chair
+						mLeft = glm::translate(mLeft, glm::vec3(-1.6f, -1.0f, -0.5f));
+						mLeft = glm::rotate(mLeft, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+						// Flip model horizontally so the character faces inward toward center
+						mLeft = glm::rotate(mLeft, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+						mLeft = glm::scale(mLeft, glm::vec3(0.25f));
+						ourShader.setMat4("model", mLeft);
+
+						// Bind palette for P1 if available
+						int palIndexP1 = (selectedPaletteP1 >= 0 && selectedPaletteP1 < 4) ? selectedPaletteP1 : 0;
+						if (paletteTextures[palIndexP1] != 0) {
+							ourShader.setBool("usePalette", true);
+							ourShader.setBool("flipPaletteHoriz", true);
+							const int PALETTE_TEX_UNIT = 15;
+							glActiveTexture(GL_TEXTURE0 + PALETTE_TEX_UNIT);
+							glBindTexture(GL_TEXTURE_2D, paletteTextures[palIndexP1]);
+							ourShader.setInt("paletteTex", PALETTE_TEX_UNIT);
+						}
+						// Draw full model for Won-scene (restore all meshes)
+						playerModelP1->Draw(ourShader);
+						// unbind
+						if (paletteTextures[palIndexP1] != 0) {
+							glActiveTexture(GL_TEXTURE0 + 15);
+							glBindTexture(GL_TEXTURE_2D, 0);
+							glActiveTexture(GL_TEXTURE0);
+							ourShader.setBool("usePalette", false);
+						}
 					}
-				}
-				if (playerModelP1) {
-					glm::mat4 mLeft = glm::mat4(1.0f);
-					// position left of gun and slightly down to match seating height
-					mLeft = glm::translate(mLeft, glm::vec3(-1.2f, -0.15f, -0.5f));
-					mLeft = glm::rotate(mLeft, glm::radians(-90.0f), glm::vec3(0.0f,1.0f,0.0f));
-					mLeft = glm::scale(mLeft, glm::vec3(0.6f));
-					ourShader.setMat4("model", mLeft);
-					ourShader.setBool("usePalette", false);
-					playerModelP1->Draw(ourShader);
-				}
-				if (playerModelP2) {
-					glm::mat4 mRight = glm::mat4(1.0f);
-					// position right of gun
-					mRight = glm::translate(mRight, glm::vec3(1.2f, -0.15f, -0.5f));
-					mRight = glm::rotate(mRight, glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f));
-					mRight = glm::scale(mRight, glm::vec3(0.6f));
-					ourShader.setMat4("model", mRight);
-					ourShader.setBool("usePalette", false);
-					playerModelP2->Draw(ourShader);
-				}
+
+					if (playerModelP2) {
+						// Update animator for P2
+						if (animatorP2) animatorP2->UpdateAnimation(deltaTime);
+						// Upload bone matrices for P2
+						const int MAX_BONES = 100;
+						if (animatorP2) {
+							auto mats = animatorP2->GetFinalBoneMatrices();
+							for (size_t bi = 0; bi < mats.size() && bi < MAX_BONES; ++bi) {
+								std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+								ourShader.setMat4(name.c_str(), mats[bi]);
+							}
+							for (size_t bi = mats.size(); bi < MAX_BONES; ++bi) {
+								std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+								ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
+							}
+						}
+						else {
+							for (int bi = 0; bi < MAX_BONES; ++bi) {
+								std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+								ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
+							}
+						}
+
+						glm::mat4 mRight = glm::mat4(1.0f);
+						// position right player to sit on right chair
+						// LOWERED: moved player down further so they sit lower in the play scene
+						mRight = glm::translate(mRight, glm::vec3(1.6f, -1.0f, -0.5f));
+						mRight = glm::rotate(mRight, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+						// Flip model horizontally so the character faces inward toward center
+						mRight = glm::rotate(mRight, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+						mRight = glm::scale(mRight, glm::vec3(0.25f));
+						ourShader.setMat4("model", mRight);
+
+						int palIndexP2 = (selectedPaletteP2 >= 0 && selectedPaletteP2 < 4) ? selectedPaletteP2 : 0;
+						if (paletteTextures[palIndexP2] != 0) {
+							ourShader.setBool("usePalette", true);
+							ourShader.setBool("flipPaletteHoriz", true);
+							const int PALETTE_TEX_UNIT = 15;
+							glActiveTexture(GL_TEXTURE0 + PALETTE_TEX_UNIT);
+							glBindTexture(GL_TEXTURE_2D, paletteTextures[palIndexP2]);
+							ourShader.setInt("paletteTex", PALETTE_TEX_UNIT);
+						}
+						// Draw full model for Won-scene (restore all meshes)
+						playerModelP2->Draw(ourShader);
+						if (paletteTextures[palIndexP2] != 0) {
+							glActiveTexture(GL_TEXTURE0 + 15);
+							glBindTexture(GL_TEXTURE_2D, 0);
+							glActiveTexture(GL_TEXTURE0);
+							ourShader.setBool("usePalette", false);
+						}
+					}
 				}
 
 				// Render table and two chairs (if loaded) placed under the gun
 				if (tableModel) {
 					glm::mat4 modelTable = glm::mat4(1.0f);
-					// Position table directly below the gun (gun at origin)
-					modelTable = glm::translate(modelTable, glm::vec3(0.0f, -1.0f, 0.0f));
+					// Position table slightly higher so it sits closer to UI buttons
+					modelTable = glm::translate(modelTable, glm::vec3(0.0f, -0.5f, -0.2f));
 					// Rotate -90 degrees around X axis as requested
 					modelTable = glm::rotate(modelTable, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-					// Keep the table small
+					// Make table smaller so it doesn't dominate the scene
 					modelTable = glm::scale(modelTable, glm::vec3(0.35f));
 					ourShader.setMat4("model", modelTable);
 					tableModel->Draw(ourShader);
 				}
 				if (chairModel) {
-					// Left chair: moved up slightly, moved back on Z, and scaled down
+					// Left chair: moved further apart (more to center), moved up slightly, and scaled
 					glm::mat4 modelChairLeft = glm::mat4(1.0f);
-					modelChairLeft = glm::translate(modelChairLeft, glm::vec3(-1.5f, -0.3f, -0.5f)); // moved back on Z
-					modelChairLeft = glm::rotate(modelChairLeft, glm::radians(-90.0f), glm::vec3(0.0f,1.0f,0.0f));
-					modelChairLeft = glm::scale(modelChairLeft, glm::vec3(0.2f)); // smaller
-				
+					modelChairLeft = glm::translate(modelChairLeft, glm::vec3(-1.2f, 0.0f, -0.25f)); // further apart on X, moved up on Y, slightly forward on Z
+					modelChairLeft = glm::rotate(modelChairLeft, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+					modelChairLeft = glm::scale(modelChairLeft, glm::vec3(0.25f)); // keep size similar
 					ourShader.setMat4("model", modelChairLeft);
 					chairModel->Draw(ourShader);
 
-					// Right chair: moved up slightly, moved back on Z, and scaled down
+					// Right chair: moved further apart, moved up slightly, and scaled
 					glm::mat4 modelChairRight = glm::mat4(1.0f);
-					modelChairRight = glm::translate(modelChairRight, glm::vec3(1.5f, -0.3f, -0.5f)); // moved back on Z
-					modelChairRight = glm::rotate(modelChairRight, glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f));
-					modelChairRight = glm::scale(modelChairRight, glm::vec3(0.2f)); // smaller
+					modelChairRight = glm::translate(modelChairRight, glm::vec3(1.2f, 0.0f, -0.25f)); // further apart on X, moved up on Y, slightly forward on Z
+					modelChairRight = glm::rotate(modelChairRight, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+					modelChairRight = glm::scale(modelChairRight, glm::vec3(0.25f)); // keep size similar
 					ourShader.setMat4("model", modelChairRight);
 					chairModel->Draw(ourShader);
 				}
@@ -1023,14 +1171,18 @@ int main()
 				// --- END ITEM MODEL RENDERING ---
 			}
 
-			// 2D UI Rendering
-			// Ensure UI uses the default texture unit (player palette binding uses unit 15)
+			// Ensure UI uses the default texture unit (player palette binding uses unit15)
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glDisable(GL_DEPTH_TEST);
 			if (menuShader) menuShader->use();
 			float elapsed = (float)glfwGetTime() - statusImageTime;
 			float alpha = 1.0f;
+
+			// If the Won overlay is active, render it semi-transparently so3D models remain visible
+			if (currentStatusTex == player1WonTex || currentStatusTex == player2WonTex) {
+				alpha = 0.65f; // translucent overlay
+			}
 
 			// Determine if action buttons should be shown.
 			bool showActionUI = true;
@@ -1043,9 +1195,9 @@ int main()
 			}
 
 
-			// 1. Handle Game Over Transition: Shot -> Winner
+			//1. Handle Game Over Transition: Shot -> Winner
 			if (gameOver) {
-				// The explicit 5.0s delay is bypassed by the click logic below
+				// The explicit5.0s delay is bypassed by the click logic below
 				if (elapsed > GAME_OVER_TRANSITION_DELAY && (currentStatusTex == player1GotTex || currentStatusTex == player2GotTex)) {
 					currentStatusTex = (currentStatusTex == player1GotTex) ? player2WonTex : player1WonTex;
 				}
@@ -1088,11 +1240,11 @@ int main()
 					// Append item list and action guide when player can act
 					std::string itemStatus = player1Turn ? "P1 Items: " : "P2 Items: ";
 					auto& items = player1Turn ? player1Items : player2Items;
-					for (int i =0; i <4; ++i) {
+					for (int i = 0; i < 4; ++i) {
 						if (i < (int)items.size())
-							itemStatus += "[" + std::to_string(i +1) + ":" + itemName(items[i]) + "] ";
+							itemStatus += "[" + std::to_string(i + 1) + ":" + itemName(items[i]) + "] ";
 						else
-							itemStatus += "[" + std::to_string(i +1) + ":Empty] ";
+							itemStatus += "[" + std::to_string(i + 1) + ":Empty] ";
 					}
 					baseTitle += " | " + itemStatus;
 					baseTitle += "| Action: Click Safe/Foe Buttons |1-4: Use Item | R: Restart";
@@ -1115,13 +1267,13 @@ int main()
 				glBindTexture(GL_TEXTURE_2D, currentStatusTex);
 				if (menuShader) menuShader->setVec3("color", glm::vec3(1.0f, 1.0f, 1.0f));
 				if (menuShader) menuShader->setFloat("alpha", alpha);
-				renderQuad(0.0f,1.0f);
+				renderQuad(0.0f, 1.0f);
 			}
 
 			// Draw all2D UI elements
 			if (menuShader) menuShader->setFloat("alpha", 1.0f);
 			for (const auto& button : activeButtons) {
-			 bool showButton = false;
+				bool showButton = false;
 				glm::vec3 finalColor = button.color;
 
 				// Determine visibility based on game state
@@ -1185,7 +1337,7 @@ int main()
 				}
 				else {
 					// Render normal buttons (Safe, Foe, Back, Description, Menu buttons)
-					renderQuad(0.0f,1.0f);
+					renderQuad(0.0f, 1.0f);
 				}
 			}
 
@@ -1205,7 +1357,7 @@ int main()
 				if (menuShader) menuShader->setVec2("scale", restartBtn.size);
 				glBindTexture(GL_TEXTURE_2D, restartButtonTex);
 				if (menuShader) menuShader->setVec3("color", restartBtn.color);
-				renderQuad(0.0f,1.0f);
+				renderQuad(0.0f, 1.0f);
 			}
 
 			// Draw Item Description Panel (if active)
@@ -1220,14 +1372,139 @@ int main()
 				if (menuShader) menuShader->setVec2("scale", glm::vec2(panelW_Norm, panelH_Norm));
 				glBindTexture(GL_TEXTURE_2D, itemDescriptionPanelTex);
 				if (menuShader) menuShader->setVec3("color", glm::vec3(1.0f, 1.0f, 1.0f));
-				renderQuad(0.0f,1.0f);
+				renderQuad(0.0f, 1.0f);
 			}
 
-			glEnable(GL_DEPTH_TEST);
+			// If a Won overlay is active, render the two player models again on top of the overlay
+			if ((currentStatusTex == player1WonTex || currentStatusTex == player2WonTex) && ourShader.ID != 0)
+			{
+				// Use the3D shader and set common uniforms
+				ourShader.use();
+				ourShader.setBool("usePalette", false);
+				ourShader.setFloat("alphaCutoff", 0.0f);
+				glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
+				glm::mat4 view = camera.GetViewMatrix();
+				ourShader.setMat4("projection", projection);
+				ourShader.setMat4("view", view);
+
+				// Temporarily force depth test to always pass so the models render fully on top of the overlay
+				// This prevents parts of the models from being occluded by previously rendered scene depth.
+				GLboolean depthEnabledBefore = glIsEnabled(GL_DEPTH_TEST);
+				GLint prevDepthFunc = 0; glGetIntegerv(GL_DEPTH_FUNC, &prevDepthFunc);
+				glEnable(GL_DEPTH_TEST);
+				glDepthFunc(GL_ALWAYS);
+
+				// Render Player1 on the RIGHT (player one shown on right as requested)
+				if (playerModelP1) {
+					if (animatorP1) animatorP1->UpdateAnimation(deltaTime);
+					// upload bone matrices
+					if (animatorP1) {
+						auto mats = animatorP1->GetFinalBoneMatrices();
+						for (size_t bi = 0; bi < mats.size() && bi < MAX_BONES; ++bi) {
+							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+							ourShader.setMat4(name.c_str(), mats[bi]);
+						}
+						for (size_t bi = mats.size(); bi < MAX_BONES; ++bi) {
+							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+							ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
+						}
+					}
+					else {
+						for (int bi = 0; bi < MAX_BONES; ++bi) {
+							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+							ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
+						}
+					}
+
+					glm::mat4 mRight = glm::mat4(1.0f);
+					// Position player1 to the right and slightly in front of the overlay
+					mRight = glm::translate(mRight, glm::vec3(1.2f, -0.6f, -0.5f));
+					// Face inward toward center
+					mRight = glm::rotate(mRight, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+					// Flip to face inward
+					mRight = glm::rotate(mRight, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+					mRight = glm::scale(mRight, glm::vec3(0.22f));
+					ourShader.setMat4("model", mRight);
+
+					// Bind palette if present
+					int palIndexP1 = (selectedPaletteP1 >= 0 && selectedPaletteP1 < 4) ? selectedPaletteP1 : 0;
+					if (paletteTextures[palIndexP1] != 0) {
+						ourShader.setBool("usePalette", true);
+						ourShader.setBool("flipPaletteHoriz", true);
+						const int PALETTE_TEX_UNIT = 15;
+						glActiveTexture(GL_TEXTURE0 + PALETTE_TEX_UNIT);
+						glBindTexture(GL_TEXTURE_2D, paletteTextures[palIndexP1]);
+						ourShader.setInt("paletteTex", PALETTE_TEX_UNIT);
+					}
+					// Draw full model for Won-scene (restore all meshes)
+					playerModelP1->Draw(ourShader);
+					// unbind
+					if (paletteTextures[palIndexP1] != 0) {
+						glActiveTexture(GL_TEXTURE0 + 15);
+						glBindTexture(GL_TEXTURE_2D, 0);
+						glActiveTexture(GL_TEXTURE0);
+						ourShader.setBool("usePalette", false);
+					}
+				}
+
+				// Render Player2 on the LEFT
+				if (playerModelP2) {
+					if (animatorP2) animatorP2->UpdateAnimation(deltaTime);
+					// upload bone matrices
+					if (animatorP2) {
+						auto mats = animatorP2->GetFinalBoneMatrices();
+						for (size_t bi = 0; bi < mats.size() && bi < MAX_BONES; ++bi) {
+							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+							ourShader.setMat4(name.c_str(), mats[bi]);
+						}
+						for (size_t bi = mats.size(); bi < MAX_BONES; ++bi) {
+							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+							ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
+						}
+					}
+					else {
+						for (int bi = 0; bi < MAX_BONES; ++bi) {
+							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+							ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
+						}
+					}
+
+					glm::mat4 mLeft = glm::mat4(1.0f);
+					// Position player2 to the left and slightly in front of the overlay
+					mLeft = glm::translate(mLeft, glm::vec3(-1.2f, -0.6f, -0.5f));
+					// Face inward toward center
+					mLeft = glm::rotate(mLeft, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+					// Flip to face inward
+					mLeft = glm::rotate(mLeft, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+					mLeft = glm::scale(mLeft, glm::vec3(0.22f));
+					ourShader.setMat4("model", mLeft);
+
+					int palIndexP2 = (selectedPaletteP2 >= 0 && selectedPaletteP2 < 4) ? selectedPaletteP2 : 0;
+					if (paletteTextures[palIndexP2] != 0) {
+						ourShader.setBool("usePalette", true);
+						ourShader.setBool("flipPaletteHoriz", true);
+						const int PALETTE_TEX_UNIT = 15;
+						glActiveTexture(GL_TEXTURE0 + PALETTE_TEX_UNIT);
+						glBindTexture(GL_TEXTURE_2D, paletteTextures[palIndexP2]);
+						ourShader.setInt("paletteTex", PALETTE_TEX_UNIT);
+					}
+					// Draw full model for Won-scene (restore all meshes)
+					playerModelP2->Draw(ourShader);
+					if (paletteTextures[palIndexP2] != 0) {
+						glActiveTexture(GL_TEXTURE0 + 15);
+						glBindTexture(GL_TEXTURE_2D, 0);
+						glActiveTexture(GL_TEXTURE0);
+						ourShader.setBool("usePalette", false);
+					}
+				}
+
+				// Restore previous depth function/state
+				glDepthFunc(prevDepthFunc);
+				if (!depthEnabledBefore) glDisable(GL_DEPTH_TEST);
+			}
 		}
 
-		glfwSwapBuffers(g_window);
-		glfwPollEvents();
+		// --- END of frame rendering inside main loop
 	}
 
 	// --- FIXED MODEL DELETION: Use explicit braces and set to nullptr ---
@@ -1241,6 +1518,13 @@ int main()
 	if (playerModelP1) { delete playerModelP1; playerModelP1 = nullptr; }
 	if (playerModelP2) { delete playerModelP2; playerModelP2 = nullptr; }
 	// --- END FIXED MODEL DELETION ---
+
+	// Shutdown: delete animations/animators
+	if (sitAnimation) { delete sitAnimation; sitAnimation = nullptr; }
+	if (danceAnimation) { delete danceAnimation; danceAnimation = nullptr; }
+	if (deathAnimation) { delete deathAnimation; deathAnimation = nullptr; }
+	if (animatorP1) { delete animatorP1; animatorP1 = nullptr; }
+	if (animatorP2) { delete animatorP2; animatorP2 = nullptr; }
 
 	glfwTerminate();
 	return 0;
@@ -1295,7 +1579,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 					selectedPaletteP1 = btn.actionCode - 20;
 					std::cout << "Player1 selected palette " << selectedPaletteP1 << std::endl;
 					return;
-					}
+				}
 				if (btn.actionCode >= 30 && btn.actionCode < 34) {
 					selectedPaletteP2 = btn.actionCode - 30;
 					std::cout << "Player2 selected palette " << selectedPaletteP2 << std::endl;
@@ -1383,7 +1667,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 		}
 		else if (currentStatusTex == player1GotTex || currentStatusTex == player2GotTex) {
 			currentStatusTex = (currentStatusTex == player1GotTex) ? player2WonTex : player1WonTex;
-			statusImageTime =0.0f; turnIndicatorSkippedManually = true; return;
-			}
+			statusImageTime = 0.0f; turnIndicatorSkippedManually = true; return;
+		}
 	}
 }
