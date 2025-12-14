@@ -1365,7 +1365,7 @@ int main()
 				// Convert600x640 pixels to normalized screen space
 				float panelW_Norm = 600.0f / SCR_WIDTH;
 				float panelH_Norm = 640.0f / SCR_HEIGHT;
-				// Center the panel
+							// Center the panel
 				float panelX = (1.0f - panelW_Norm) / 2.0f;
 				float panelY = (1.0f - panelH_Norm) / 2.0f;
 				if (menuShader) menuShader->setVec2("offset", glm::vec2(panelX, panelY));
@@ -1505,6 +1505,9 @@ int main()
 		}
 
 		// --- END of frame rendering inside main loop
+		// Add GLFW event polling and buffer swap so the window remains responsive
+		glfwSwapBuffers(g_window);
+		glfwPollEvents();
 	}
 
 	// --- FIXED MODEL DELETION: Use explicit braces and set to nullptr ---
