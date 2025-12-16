@@ -84,17 +84,17 @@ Model* playerModelP2 = nullptr;
 std::unordered_map<unsigned int, glm::vec2> textureSizes;
 
 // Small optimization: single global constant for bone matrix uploads
-const int MAX_BONES = 100;
+const int MAX_BONES = 100; // increased to support models with many bones/meshes
 
 std::vector<MenuButton> activeButtons;
-unsigned int quadVAO = 0;
-Shader* menuShader = nullptr;
-Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
-float lastX = SCR_WIDTH / 2.0f, lastY = SCR_HEIGHT / 2.0f;
-bool firstMouse = true;
-float deltaTime = 0.0f, lastFrame = 0.0f;
-float lastActionTime = 0.0f;
-Model* gunModel = nullptr;
+	unsigned int quadVAO = 0;
+	Shader* menuShader = nullptr;
+	Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
+	float lastX = SCR_WIDTH / 2.0f, lastY = SCR_HEIGHT / 2.0f;
+	bool firstMouse = true;
+	float deltaTime = 0.0f, lastFrame = 0.0f;
+	float lastActionTime = 0.0f;
+	Model* gunModel = nullptr;
 // --- UPDATED MODEL POINTERS ---
 Model* itemModelRoll = nullptr;
 Model* itemModelSkip = nullptr;
@@ -232,7 +232,7 @@ void getItemUVs(ItemType type, float& vStart, float& vEnd)
 
 
 
-// Callback implementations
+ // Callback implementations
 void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 {
 	// Update the OpenGL viewport when the window size changes
@@ -312,7 +312,7 @@ void giveRandomItem(bool forPlayer1)
 void useItem(bool forPlayer1, int slot)
 {
 	auto& items = forPlayer1 ? player1Items : player2Items;
-	if (slot < 0 || slot >= (int)items.size()) return;
+	if (slot <0 || slot >= (int)items.size()) return;
 
 	ItemType item = items[slot];
 	items.erase(items.begin() + slot);
@@ -322,12 +322,12 @@ void useItem(bool forPlayer1, int slot)
 	{
 	case ITEM_ROLL:
 		std::fill(std::begin(chamber), std::end(chamber), false);
-		chamber[randomInt(0, 5)] = true;
-		currentChamber = 0;
+		chamber[randomInt(0,5)] = true;
+		currentChamber =0;
 		std::cout << "Chamber rolled!" << std::endl;
 		break;
 	case ITEM_MOVE_BULLET:
-		currentChamber = (currentChamber + 1) % 6;
+		currentChamber = (currentChamber +1) %6;
 		std::cout << "Bullet moved forward one chamber (now at index " << currentChamber << ")." << std::endl;
 		break;
 	case ITEM_SKIP:
@@ -343,6 +343,9 @@ void useItem(bool forPlayer1, int slot)
 		currentStatusTex = player1Turn ? player1Tex : player2Tex;
 		statusImageTime = (float)glfwGetTime();
 	}
+
+	// Update game buttons to reflect new active player
+	setupGameButtons();
 
 	updateHUD();
 }
@@ -361,7 +364,8 @@ void startGameInit()
 	turnIndicatorSkippedManually = false;
 	showItemDescription = false;
 
-	// Reset animators to sitting animation when a new game begins
+	// Ensure players always start in the sitting animation (fresh game or restart).
+	// Force sitAnimation on both animators, reset time, do not blend or preserve previous animations.
 	if (animatorP1 && sitAnimation) {
 		animatorP1->m_CurrentAnimation = sitAnimation;
 		animatorP1->m_CurrentTime = 0.0f;
@@ -383,6 +387,9 @@ void startGameInit()
 	currentStatusTex = player1Tex;
 	statusImageTime = (float)glfwGetTime();
 	updateHUD();
+
+	// Ensure UI buttons reflect the freshly reset turn state
+	setupGameButtons();
 }
 
 // MODIFIED: Rotation logic removed
@@ -394,82 +401,123 @@ void handleGameAction(int action)
 	statusImageTime = (float)glfwGetTime();
 	turnIndicatorSkippedManually = false;
 	bool fired = chamber[currentChamber];
-	currentChamber = (currentChamber + 1) % 6;
-	bool turnSwitched = false;
+	currentChamber = (currentChamber +1) %6;
+    bool turnSwitched = false;
 
-	//2. Resolve the shot
-	if (action == 1) // Shoot Opponent (Foe button)
-	{
-		if (fired)
-		{
-			currentStatusTex = player1Turn ? player2GotTex : player1GotTex;
-			gameMessage = player1Turn ? "P1 shot P2 - P1 Wins!" : "P2 shot P1 - P2 Wins!";
-			gameOver = true;
-			// Determine winner: if it was player1's turn when shot succeeded, player1 is the winner
-			lastWinner = player1Turn ? 1 : 2;
-			// Play winner/loser animations -> REPLACED: set both animators to sitting animation to avoid dance/death.
-			if (animatorP1 && sitAnimation) {
-				animatorP1->m_CurrentAnimation = sitAnimation;
-				animatorP1->m_CurrentTime = 0.0f;
-				animatorP1->m_CurrentAnimation2 = nullptr;
-				animatorP1->m_CurrentTime2 = 0.0f;
-				animatorP1->m_blendAmount = 0.0f;
-			}
-			if (animatorP2 && sitAnimation) {
-				animatorP2->m_CurrentAnimation = sitAnimation;
-				animatorP2->m_CurrentTime = 0.0f;
-				animatorP2->m_CurrentAnimation2 = nullptr;
-				animatorP2->m_CurrentTime2 = 0.0f;
-				animatorP2->m_blendAmount = 0.0f;
-			}
-		}
-		else
-		{
-			currentStatusTex = clickTex;
-			player1Turn = !player1Turn;
-			gameMessage = player1Turn ? "Player1's turn" : "Player2's turn";
-			turnSwitched = true;
-		}
-	}
-	else if (action == 2) // Shoot Self (Safe button)
-	{
-		if (fired)
-		{
-			currentStatusTex = player1Turn ? player1GotTex : player2GotTex;
-			gameMessage = player1Turn ? "P1 shot self - P2 Wins!" : "P2 shot self - P1 Wins!";
-			gameOver = true;
-			// If player shot self, the opponent wins
-			lastWinner = player1Turn ? 2 : 1;
-			// Play winner/loser animations -> REPLACED: set both animators to sitting animation to avoid dance/death.
-			if (animatorP1 && sitAnimation) {
-				animatorP1->m_CurrentAnimation = sitAnimation;
-				animatorP1->m_CurrentTime = 0.0f;
-				animatorP1->m_CurrentAnimation2 = nullptr;
-				animatorP1->m_CurrentTime2 = 0.0f;
-				animatorP1->m_blendAmount = 0.0f;
-			}
-			if (animatorP2 && sitAnimation) {
-				animatorP2->m_CurrentAnimation = sitAnimation;
-				animatorP2->m_CurrentTime = 0.0f;
-				animatorP2->m_CurrentAnimation2 = nullptr;
-				animatorP2->m_CurrentTime2 = 0.0f;
-				animatorP2->m_blendAmount = 0.0f;
-			}
-		}
-		else
-		{
-			currentStatusTex = clickTex;
-			giveRandomItem(player1Turn);
-			player1Turn = !player1Turn;
-			gameMessage = player1Turn ? "Player1's turn" : "Player2's turn";
-			turnSwitched = true;
-		}
-	}
+    //2. Resolve the shot
+    if (action ==1) // Shoot Opponent (Foe button)
+    {
+        if (fired)
+        {
+            currentStatusTex = player1Turn ? player2GotTex : player1GotTex;
+            gameMessage = player1Turn ? "P1 shot P2 - P1 Wins!" : "P2 shot P1 - P2 Wins!";
+            gameOver = true;
+            // Determine winner: if it was player1's turn when shot succeeded, player1 is the winner
+            lastWinner = player1Turn ? 1 : 2;
+
+            // Assign winner/loser animations: winner dances, loser dies.
+            if (lastWinner == 1) {
+                if (animatorP1 && danceAnimation) {
+                    animatorP1->m_CurrentAnimation = danceAnimation;
+                    animatorP1->m_CurrentTime = 0.0f;
+                    animatorP1->m_CurrentAnimation2 = nullptr;
+                    animatorP1->m_CurrentTime2 = 0.0f;
+                    animatorP1->m_blendAmount = 0.0f;
+                }
+                if (animatorP2 && deathAnimation) {
+                    animatorP2->m_CurrentAnimation = deathAnimation;
+                    animatorP2->m_CurrentTime = 0.0f;
+                    animatorP2->m_CurrentAnimation2 = nullptr;
+                    animatorP2->m_CurrentTime2 = 0.0f;
+                    animatorP2->m_blendAmount = 0.0f;
+                }
+            }
+            else if (lastWinner == 2) {
+                if (animatorP2 && danceAnimation) {
+                    animatorP2->m_CurrentAnimation = danceAnimation;
+                    animatorP2->m_CurrentTime = 0.0f;
+                    animatorP2->m_CurrentAnimation2 = nullptr;
+                    animatorP2->m_CurrentTime2 = 0.0f;
+                    animatorP2->m_blendAmount = 0.0f;
+                }
+                if (animatorP1 && deathAnimation) {
+                    animatorP1->m_CurrentAnimation = deathAnimation;
+                    animatorP1->m_CurrentTime = 0.0f;
+                    animatorP1->m_CurrentAnimation2 = nullptr;
+                    animatorP1->m_CurrentTime2 = 0.0f;
+                    animatorP1->m_blendAmount = 0.0f;
+                }
+            }
+        }
+        else
+        {
+            currentStatusTex = clickTex;
+            player1Turn = !player1Turn;
+            gameMessage = player1Turn ? "Player1's turn" : "Player2's turn";
+            turnSwitched = true;
+            // Update buttons to reflect the toggled turn
+            setupGameButtons();
+        }
+    }
+    else if (action ==2) // Shoot Self (Safe button)
+    {
+        if (fired)
+        {
+            currentStatusTex = player1Turn ? player1GotTex : player2GotTex;
+            gameMessage = player1Turn ? "P1 shot self - P2 Wins!" : "P2 shot self - P1 Wins!";
+            gameOver = true;
+            // If player shot self, the opponent wins
+            lastWinner = player1Turn ? 2 : 1;
+
+            // Assign winner/loser animations: winner dances, loser dies.
+            if (lastWinner == 1) {
+                if (animatorP1 && danceAnimation) {
+                    animatorP1->m_CurrentAnimation = danceAnimation;
+                    animatorP1->m_CurrentTime = 0.0f;
+                    animatorP1->m_CurrentAnimation2 = nullptr;
+                    animatorP1->m_CurrentTime2 = 0.0f;
+                    animatorP1->m_blendAmount = 0.0f;
+                }
+                if (animatorP2 && deathAnimation) {
+                    animatorP2->m_CurrentAnimation = deathAnimation;
+                    animatorP2->m_CurrentTime = 0.0f;
+                    animatorP2->m_CurrentAnimation2 = nullptr;
+                    animatorP2->m_CurrentTime2 = 0.0f;
+                    animatorP2->m_blendAmount = 0.0f;
+                }
+            }
+            else if (lastWinner == 2) {
+                if (animatorP2 && danceAnimation) {
+                    animatorP2->m_CurrentAnimation = danceAnimation;
+                    animatorP2->m_CurrentTime = 0.0f;
+                    animatorP2->m_CurrentAnimation2 = nullptr;
+                    animatorP2->m_CurrentTime2 = 0.0f;
+                    animatorP2->m_blendAmount = 0.0f;
+                }
+                if (animatorP1 && deathAnimation) {
+                    animatorP1->m_CurrentAnimation = deathAnimation;
+                    animatorP1->m_CurrentTime = 0.0f;
+                    animatorP1->m_CurrentAnimation2 = nullptr;
+                    animatorP1->m_CurrentTime2 = 0.0f;
+                    animatorP1->m_blendAmount = 0.0f;
+                }
+            }
+        }
+        else
+        {
+            currentStatusTex = clickTex;
+            giveRandomItem(player1Turn);
+            player1Turn = !player1Turn;
+            gameMessage = player1Turn ? "Player1's turn" : "Player2's turn";
+            turnSwitched = true;
+            // Update buttons to reflect the toggled turn
+            setupGameButtons();
+        }
+    }
 
 	updateHUD();
 }
 
-// MODIFIED: Removal of duplicated local MAX_BONES definition
 // --- OpenGL/Utility Functions ---
 unsigned int loadTexture(const char* path, bool flip)
 {
@@ -633,19 +681,30 @@ void setupStartSubMenu() {
 void setupGameButtons() {
 	activeButtons.clear();
 
-	// Use actual image sizes for Safe and Foe buttons
-	glm::vec2 safeSize = getNormalizedSize(safeButtonTex);
-	glm::vec2 foeSize = getNormalizedSize(foeButtonTex);
+	// Decide which texture/action belongs on left (player1) and right (player2)
+	unsigned int leftTex = (player1Turn ? safeButtonTex : foeButtonTex); // left corresponds to player1
+	unsigned int rightTex = (player1Turn ? foeButtonTex : safeButtonTex); // right corresponds to player2
 
-	float H_SPACING = 0.5f; // horizontal gap between action buttons
-	float totalWidth = safeSize.x + H_SPACING + foeSize.x;
+	glm::vec2 leftSize = getNormalizedSize(leftTex);
+	glm::vec2 rightSize = getNormalizedSize(rightTex);
 
-	float startX = (1.0f - totalWidth) / 2.0f;
-	float maxH = std::max(safeSize.y, foeSize.y);
-	float btnY = (1.0f - maxH) / 2.0f; // vertical center based on tallest
+	// Increase horizontal spacing so buttons are further apart
+	float H_SPACING =0.20f; // larger normalized spacing
+	float totalWidth = leftSize.x + H_SPACING + rightSize.x;
 
-	activeButtons.push_back({ safeButtonTex, glm::vec2(startX, btnY + (maxH - safeSize.y) / 2.0f), safeSize, STATE_GAME, true,2, glm::vec3(0.2f,0.8f,0.2f) });
-	activeButtons.push_back({ foeButtonTex, glm::vec2(startX + safeSize.x + H_SPACING, btnY + (maxH - foeSize.y) / 2.0f), foeSize, STATE_GAME, true,1, glm::vec3(0.8f,0.2f,0.2f) });
+	float startX = (1.0f - totalWidth) /2.0f;
+	float maxH = std::max(leftSize.y, rightSize.y);
+	float btnY = (1.0f - maxH) /2.0f; // vertical center based on tallest
+
+	// Left button (represents Player1)
+	int leftAction = (leftTex == safeButtonTex) ?2 :1; //2 = Safe (self),1 = Foe (opponent)
+	glm::vec3 leftColor = (leftAction ==2) ? glm::vec3(0.2f,0.8f,0.2f) : glm::vec3(0.8f,0.2f,0.2f);
+	activeButtons.push_back({ leftTex, glm::vec2(startX, btnY + (maxH - leftSize.y) /2.0f), leftSize, STATE_GAME, true, leftAction, leftColor });
+
+	// Right button (represents Player2)
+	int rightAction = (rightTex == safeButtonTex) ?2 :1;
+	glm::vec3 rightColor = (rightAction ==2) ? glm::vec3(0.2f,0.8f,0.2f) : glm::vec3(0.8f,0.2f,0.2f);
+	activeButtons.push_back({ rightTex, glm::vec2(startX + leftSize.x + H_SPACING, btnY + (maxH - rightSize.y) /2.0f), rightSize, STATE_GAME, true, rightAction, rightColor });
 
 	// Top-left/back and top-right/description should use their texture sizes
 	glm::vec2 backSize = getNormalizedSize(backButtonTex);
@@ -654,13 +713,13 @@ void setupGameButtons() {
 	activeButtons.push_back({ backButtonTex, glm::vec2(MARGIN_X,1.0f - MARGIN_Y - backSize.y), backSize, STATE_MENU, false,3, glm::vec3(1.0f,1.0f,1.0f) });
 	activeButtons.push_back({ descriptionButtonTex, glm::vec2(1.0f - MARGIN_X - descSize.x,1.0f - MARGIN_Y - descSize.y), descSize, STATE_GAME, false,4, glm::vec3(1.0f,1.0f,1.0f) });
 
-	//3. Item Slot Buttons (Bottom of the scene) keep existing logic
-	float ITEM_SPACING = ITEM_SLOT_SIZE_NORM * 1.2f;
-	float itemXBase = (1.0f - ITEM_SLOT_SIZE_NORM * 4.0f) / 2.0f - ITEM_SLOT_SIZE_NORM * 0.2f;
+	//3. Item Slot Buttons (Bottom of the scene)
+	float ITEM_SPACING = ITEM_SLOT_SIZE_NORM *1.2f;
+	float itemXBase = (1.0f - ITEM_SLOT_SIZE_NORM *4.0f) /2.0f - ITEM_SLOT_SIZE_NORM *0.2f;
 	float itemY = MARGIN_Y; // Bottom
-	for (int i = 0; i < 4; ++i) {
+	for (int i =0; i <4; ++i) {
 		activeButtons.push_back({
-			(i == 0 ? slot1Tex : (i == 1 ? slot2Tex : (i == 2 ? slot3Tex : slot4Tex))),
+			(i ==0 ? slot1Tex : (i ==1 ? slot2Tex : (i ==2 ? slot3Tex : slot4Tex))),
 			glm::vec2(itemXBase + (float)i * ITEM_SPACING, itemY), // Use ITEM_SPACING here
 			glm::vec2(ITEM_SLOT_SIZE_NORM, ITEM_SLOT_SIZE_NORM),
 			STATE_GAME,
@@ -817,55 +876,12 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		if (currentGameState == STATE_MENU || currentGameState == STATE_SUBMENU_START || currentGameState == STATE_CHAR_SELECT)
 		{
-			// Menu / Character Select Rendering
-			glDisable(GL_DEPTH_TEST);
-			if (menuShader) menuShader->use();
-			if (menuShader) menuShader->setFloat("alpha", 1.0f);
-			if (menuShader) menuShader->setFloat("vStart", 0.0f); // Default to full texture
-			if (menuShader) menuShader->setFloat("vEnd", 1.0f); // Default to full texture
-
-			glBindTexture(GL_TEXTURE_2D, menuBackgroundTex);
-			if (menuShader) menuShader->setVec2("offset", glm::vec2(0.0f, 0.0f));
-			if (menuShader) menuShader->setVec2("scale", glm::vec2(1.0f, 1.0f));
-			if (menuShader) menuShader->setVec3("color", glm::vec3(0.0f, 0.0f, 0.1f));
-			renderQuad(0.0f, 1.0f);
-			for (const auto& button : activeButtons)
-			{
-				if (menuShader) menuShader->setVec2("offset", button.position);
-				if (menuShader) menuShader->setVec2("scale", button.size);
-				glBindTexture(GL_TEXTURE_2D, button.textureID);
-				// For character select, tint selected palettes (top row20..23, bottom row30..33)
-				if (currentGameState == STATE_CHAR_SELECT) {
-					// Update window title with current selections so user sees what they picked
-					std::string selTitle = "Character Select | P1:" + std::string((selectedPaletteP1 == -1) ? "None" : std::to_string(selectedPaletteP1))
-						+ " P2:" + std::string((selectedPaletteP2 == -1) ? "None" : std::to_string(selectedPaletteP2));
-					glfwSetWindowTitle(g_window, selTitle.c_str());
-
-					if (button.actionCode >= 20 && button.actionCode < 24) {
-						int idx = button.actionCode - 20;
-						glm::vec3 color = button.color;
-						if (selectedPaletteP1 == idx) color = glm::vec3(0.4f, 1.0f, 0.4f);
-						if (selectedPaletteP2 == idx) color = glm::vec3(0.4f, 0.4f, 1.0f);
-						if (menuShader) menuShader->setVec3("color", color);
-						renderQuad(0.0f, 1.0f);
-						continue;
-					}
-					if (button.actionCode >= 30 && button.actionCode < 34) {
-						int idx = button.actionCode - 30;
-						glm::vec3 color = button.color;
-						if (selectedPaletteP2 == idx) color = glm::vec3(0.4f, 0.4f, 1.0f);
-						if (selectedPaletteP1 == idx) color = glm::vec3(0.4f, 1.0f, 0.4f);
-						if (menuShader) menuShader->setVec3("color", color);
-						renderQuad(0.0f, 1.0f);
-						continue;
-					}
-				}
-				if (menuShader) menuShader->setVec3("color", button.color);
-				renderQuad(0.0f, 1.0f);
-			}
+			// Menu/character select logic preserved; actual UI rendering moved to the dedicated UI pass below.
+			// No3D rendering required here.
 		}
 		else if (currentGameState == STATE_CREDITS)
 		{
+			// Keep credits clear behavior (solid color) here; actual UI rendering for credit buttons moved to UI pass.
 			glDisable(GL_DEPTH_TEST);
 			glClearColor(0.0f, 0.0f, 0.3f, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT);
@@ -874,10 +890,34 @@ int main()
 		{
 			bool inCooldown = ((float)glfwGetTime() - lastActionTime < MIN_TURN_DELAY);
 
+			// --- Draw Won overlay as a background BEFORE3D rendering so player models appear in front ---
+			if (currentStatusTex == player1WonTex || currentStatusTex == player2WonTex) {
+				// Draw full-screen background image behind3D models
+				glDisable(GL_DEPTH_TEST);
+				// Prevent the overlay from writing to the depth buffer so subsequent3D draws are not occluded
+				glDepthMask(GL_FALSE);
+				glEnable(GL_BLEND);
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				if (menuShader) menuShader->use();
+				if (menuShader) menuShader->setFloat("alpha",0.65f);
+				if (menuShader) menuShader->setVec2("offset", glm::vec2(0.0f,0.0f));
+				if (menuShader) menuShader->setVec2("scale", glm::vec2(1.0f,1.0f));
+				glBindTexture(GL_TEXTURE_2D, currentStatusTex);
+				if (menuShader) menuShader->setVec3("color", glm::vec3(1.0f,1.0f,1.0f));
+				renderQuad(0.0f,1.0f);
+				// Restore depth write and depth testing for3D rendering
+				glDepthMask(GL_TRUE);
+				glEnable(GL_DEPTH_TEST);
+			}
+
+			// Determine if we're in the Won scene once and reuse the flag
+			bool isWonScene = (currentStatusTex == player1WonTex || currentStatusTex == player2WonTex);
+
 			//3D Rendering (Gun Model)
 			glEnable(GL_DEPTH_TEST);
+			glDepthMask(GL_TRUE);
 			// CRITICAL CHECK: Ensure shader is valid before using it
-			if (ourShader.ID == 0) {
+			if (ourShader.ID ==0) {
 				// Skip3D rendering if the main shader is invalid
 				std::cerr << "Warning: Main shader is invalid. Skipping3D rendering."
 					<< std::endl;
@@ -887,54 +927,55 @@ int main()
 				// Prevent accidental palette use for non-player meshes
 				ourShader.setBool("usePalette", false);
 				// Ensure fragments with very low alpha are preserved for models
-				ourShader.setFloat("alphaCutoff", 0.0f);
-				glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
+				ourShader.setFloat("alphaCutoff",0.0f);
+				glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT,0.1f,1000.0f);
 				glm::mat4 view = camera.GetViewMatrix();
 				ourShader.setMat4("projection", projection);
 				ourShader.setMat4("view", view);
 
-				if (gunModel)
+				// Only draw the gun/model items/table/chairs when NOT in the Won scene
+				if (gunModel && !isWonScene)
 				{
 					// compute target world point from mouse ray intersecting z=0 plane
 					glm::vec3 rayOrigin = camera.Position;
 					// normalized device coords
 					float mx = lastX / (float)SCR_WIDTH;
 					float my = lastY / (float)SCR_HEIGHT;
-					float ndcX = mx * 2.0f - 1.0f;
-					float ndcY = my * 2.0f - 1.0f;
+					float ndcX = mx *2.0f -1.0f;
+					float ndcY = my *2.0f -1.0f;
 
-					glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
+					glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT,0.1f,1000.0f);
 					glm::mat4 view = camera.GetViewMatrix();
 					glm::mat4 invProj = glm::inverse(projection);
 					glm::mat4 invView = glm::inverse(view);
 
 					// Ray in clip space
-					glm::vec4 rayClip(ndcX, ndcY, -1.0f, 1.0f);
+					glm::vec4 rayClip(ndcX, ndcY, -1.0f,1.0f);
 					// Eye space
 					glm::vec4 rayEye = invProj * rayClip;
-					rayEye.z = -1.0f; rayEye.w = 0.0f;
+					rayEye.z = -1.0f; rayEye.w =0.0f;
 					// World space direction
 					glm::vec4 rayWorld4 = invView * rayEye;
 					glm::vec3 rayDir = glm::normalize(glm::vec3(rayWorld4));
 
 					glm::vec3 targetWorld = glm::vec3(0.0f);
-					if (fabs(rayDir.z) > 1e-6f) {
+					if (fabs(rayDir.z) >1e-6f) {
 						float t = -rayOrigin.z / rayDir.z; // intersect with z=0 plane
-						if (t > 0.0f) targetWorld = rayOrigin + rayDir * t;
-						else targetWorld = rayOrigin + rayDir * 5.0f; // fallback
+						if (t >0.0f) targetWorld = rayOrigin + rayDir * t;
+						else targetWorld = rayOrigin + rayDir *5.0f; // fallback
 					}
 					else {
 						// ray parallel to plane - fallback to point far along ray
-						targetWorld = rayOrigin + rayDir * 5.0f;
+						targetWorld = rayOrigin + rayDir *5.0f;
 					}
 
 					// Build orientation so that model's local +X axis points toward targetWorld
 					glm::vec3 gunPos = glm::vec3(0.0f);
 					glm::vec3 dir = glm::normalize(targetWorld - gunPos);
 					// avoid degenerate
-					if (glm::length(dir) < 1e-6f) dir = glm::vec3(1.0f, 0.0f, 0.0f);
+					if (glm::length(dir) <1e-6f) dir = glm::vec3(1.0f,0.0f,0.0f);
 
-					glm::vec3 up(0.0f, 1.0f, 0.0f);
+					glm::vec3 up(0.0f,1.0f,0.0f);
 					// MODIFIED: xAxis now equals dir as requested
 					glm::vec3 xAxis = dir; // left side follows target
 					glm::vec3 zAxis = glm::normalize(glm::cross(xAxis, up));
@@ -942,229 +983,252 @@ int main()
 					// Preserve prior vertical inversion if applied
 
 					glm::mat4 orient(1.0f);
-					orient[0] = glm::vec4(xAxis, 0.0f);
-					orient[1] = glm::vec4(yAxis, 0.0f);
-					orient[2] = glm::vec4(zAxis, 0.0f);
+					orient[0] = glm::vec4(xAxis,0.0f);
+					orient[1] = glm::vec4(yAxis,0.0f);
+					orient[2] = glm::vec4(zAxis,0.0f);
 					// Apply base model rotation that was previously used (camera orientation)
-					glm::mat4 baseRot = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+					glm::mat4 baseRot = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
 
 					// Compose final model matrix: translate -> apply flip -> orient -> baseRot -> scale
 					glm::mat4 model = glm::mat4(1.0f);
 					model = glm::translate(model, gunPos);
 
 					// Apply180-degree rotation around World Y axis to flip the gun horizontally BEFORE orientation
-					model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+					model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f,1.0f,0.0f));
 
 					model = model * orient * baseRot;
 					model = glm::scale(model, glm::vec3(0.5f));
 					ourShader.setMat4("model", model);
 					gunModel->Draw(ourShader);
+				}
 
-					// Draw two NecoArc models next to the gun (left and right)
+				// Draw two NecoArc models next to the gun (left and right)
 				// Ensure we update animators and upload bone matrices per-player before drawing
-					if (playerModelP1) {
-						// Update animator for P1
-						if (animatorP1) animatorP1->UpdateAnimation(deltaTime);
-						// Upload bone matrices for P1 (use animator if present)
-						const int MAX_BONES = 100;
-						if (animatorP1) {
-							auto mats = animatorP1->GetFinalBoneMatrices();
-							for (size_t bi = 0; bi < mats.size() && bi < MAX_BONES; ++bi) {
-								std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
-								ourShader.setMat4(name.c_str(), mats[bi]);
-							}
-							// fill rest with identity
-							for (size_t bi = mats.size(); bi < MAX_BONES; ++bi) {
-								std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
-								ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
-							}
-						}
-						else {
-							for (int bi = 0; bi < MAX_BONES; ++bi) {
-								std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
-								ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
-							}
-						}
+				if (playerModelP1) {
+					// Disable face culling while drawing player models to avoid half-mesh clipping on improperly wound meshes
+					GLboolean cullEnabledBeforeModels = glIsEnabled(GL_CULL_FACE);
+					if (cullEnabledBeforeModels) glDisable(GL_CULL_FACE);
 
-						glm::mat4 mLeft = glm::mat4(1.0f);
-						// position left player to sit on left chair
-						mLeft = glm::translate(mLeft, glm::vec3(-1.6f, -1.0f, -0.5f));
-						mLeft = glm::rotate(mLeft, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-						// Flip model horizontally so the character faces inward toward center
-						mLeft = glm::rotate(mLeft, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-						mLeft = glm::scale(mLeft, glm::vec3(0.25f));
-						ourShader.setMat4("model", mLeft);
-
-						// Bind palette for P1 if available
-						int palIndexP1 = (selectedPaletteP1 >= 0 && selectedPaletteP1 < 4) ? selectedPaletteP1 : 0;
-						if (paletteTextures[palIndexP1] != 0) {
-							ourShader.setBool("usePalette", true);
-							ourShader.setBool("flipPaletteHoriz", true);
-							const int PALETTE_TEX_UNIT = 15;
-							glActiveTexture(GL_TEXTURE0 + PALETTE_TEX_UNIT);
-							glBindTexture(GL_TEXTURE_2D, paletteTextures[palIndexP1]);
-							ourShader.setInt("paletteTex", PALETTE_TEX_UNIT);
+					// Update animator for P1
+					if (animatorP1) animatorP1->UpdateAnimation(deltaTime);
+					// Upload bone matrices for P1 (use animator if present)
+					if (animatorP1) {
+						auto mats = animatorP1->GetFinalBoneMatrices();
+						for (size_t bi =0; bi < mats.size() && bi < MAX_BONES; ++bi) {
+							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+							ourShader.setMat4(name.c_str(), mats[bi]);
 						}
-						// Draw full model for Won-scene (restore all meshes)
-						playerModelP1->Draw(ourShader);
-						// unbind
-						if (paletteTextures[palIndexP1] != 0) {
-							glActiveTexture(GL_TEXTURE0 + 15);
-							glBindTexture(GL_TEXTURE_2D, 0);
-							glActiveTexture(GL_TEXTURE0);
-							ourShader.setBool("usePalette", false);
+						// fill rest with identity
+						for (size_t bi = mats.size(); bi < MAX_BONES; ++bi) {
+							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+							ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
+						}
+					}
+					else {
+						for (int bi =0; bi < MAX_BONES; bi++) {
+							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+							ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
 						}
 					}
 
-					if (playerModelP2) {
-						// Update animator for P2
-						if (animatorP2) animatorP2->UpdateAnimation(deltaTime);
-						// Upload bone matrices for P2
-						const int MAX_BONES = 100;
-						if (animatorP2) {
-							auto mats = animatorP2->GetFinalBoneMatrices();
-							for (size_t bi = 0; bi < mats.size() && bi < MAX_BONES; ++bi) {
-								std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
-								ourShader.setMat4(name.c_str(), mats[bi]);
-							}
-							for (size_t bi = mats.size(); bi < MAX_BONES; ++bi) {
-								std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
-								ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
-							}
-						}
-						else {
-							for (int bi = 0; bi < MAX_BONES; ++bi) {
-								std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
-								ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
-							}
-						}
+					// Determine transform offsets depending on whether we are in the Won scene
+					float leftX = isWonScene ? -2.2f : -1.6f;
+					float rightX = isWonScene ?2.2f :1.6f;
+					float sitY = isWonScene ? -1.4f : -1.0f;
 
-						glm::mat4 mRight = glm::mat4(1.0f);
-						// position right player to sit on right chair
-						// LOWERED: moved player down further so they sit lower in the play scene
-						mRight = glm::translate(mRight, glm::vec3(1.6f, -1.0f, -0.5f));
-						mRight = glm::rotate(mRight, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-						// Flip model horizontally so the character faces inward toward center
-						mRight = glm::rotate(mRight, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-						mRight = glm::scale(mRight, glm::vec3(0.25f));
-						ourShader.setMat4("model", mRight);
+					glm::mat4 mLeft = glm::mat4(1.0f);
+					// position left player to sit on left chair (normal sitting or win scene adjustments)
+					mLeft = glm::translate(mLeft, glm::vec3(leftX, sitY, -0.5f));
+					mLeft = glm::rotate(mLeft, glm::radians(-90.0f), glm::vec3(0.0f,1.0f,0.0f));
+					// Flip model horizontally so the character faces inward toward center
+					mLeft = glm::rotate(mLeft, glm::radians(180.0f), glm::vec3(0.0f,1.0f,0.0f));
+					mLeft = glm::scale(mLeft, glm::vec3(0.25f));
+					ourShader.setMat4("model", mLeft);
 
-						int palIndexP2 = (selectedPaletteP2 >= 0 && selectedPaletteP2 < 4) ? selectedPaletteP2 : 0;
-						if (paletteTextures[palIndexP2] != 0) {
-							ourShader.setBool("usePalette", true);
-							ourShader.setBool("flipPaletteHoriz", true);
-							const int PALETTE_TEX_UNIT = 15;
-							glActiveTexture(GL_TEXTURE0 + PALETTE_TEX_UNIT);
-							glBindTexture(GL_TEXTURE_2D, paletteTextures[palIndexP2]);
-							ourShader.setInt("paletteTex", PALETTE_TEX_UNIT);
+					// Bind palette for P1 if available
+					int palIndexP1 = (selectedPaletteP1 >=0 && selectedPaletteP1 <4) ? selectedPaletteP1 :0;
+					if (paletteTextures[palIndexP1] !=0) {
+						ourShader.setBool("usePalette", true);
+						ourShader.setBool("flipPaletteHoriz", true);
+						const int PALETTE_TEX_UNIT =15;
+						glActiveTexture(GL_TEXTURE0 + PALETTE_TEX_UNIT);
+						glBindTexture(GL_TEXTURE_2D, paletteTextures[palIndexP1]);
+						ourShader.setInt("paletteTex", PALETTE_TEX_UNIT);
+					}
+					// Draw full model (visible in Won scene too)
+					playerModelP1->Draw(ourShader);
+					// unbind
+					if (paletteTextures[palIndexP1] !=0) {
+						glActiveTexture(GL_TEXTURE0 +15);
+						glBindTexture(GL_TEXTURE_2D,0);
+						glActiveTexture(GL_TEXTURE0);
+						ourShader.setBool("usePalette", false);
+					}
+
+					// Restore face culling state after drawing models
+					if (cullEnabledBeforeModels) glEnable(GL_CULL_FACE);
+				}
+
+				if (playerModelP2) {
+					// Disable face culling while drawing player models to avoid half-mesh clipping
+					GLboolean cullEnabledBeforeModelsP2 = glIsEnabled(GL_CULL_FACE);
+					if (cullEnabledBeforeModelsP2) glDisable(GL_CULL_FACE);
+
+					if (animatorP2) animatorP2->UpdateAnimation(deltaTime);
+					// Upload bone matrices for P2
+					if (animatorP2) {
+						auto mats = animatorP2->GetFinalBoneMatrices();
+						for (size_t bi =0; bi < mats.size() && bi < MAX_BONES; ++bi) {
+							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+							ourShader.setMat4(name.c_str(), mats[bi]);
 						}
-						// Draw full model for Won-scene (restore all meshes)
-						playerModelP2->Draw(ourShader);
-						if (paletteTextures[palIndexP2] != 0) {
-							glActiveTexture(GL_TEXTURE0 + 15);
-							glBindTexture(GL_TEXTURE_2D, 0);
-							glActiveTexture(GL_TEXTURE0);
-							ourShader.setBool("usePalette", false);
+						for (size_t bi = mats.size(); bi < MAX_BONES; ++bi) {
+							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+							ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
 						}
 					}
+					else {
+						for (int bi =0; bi < MAX_BONES; ++bi) {
+							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
+							ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
+						}
+					}
+
+					float leftX = isWonScene ? -2.2f : -1.6f;
+					float rightX = isWonScene ?2.2f :1.6f;
+					float sitY = isWonScene ? -1.4f : -1.0f;
+
+					glm::mat4 mRight = glm::mat4(1.0f);
+					// position right player to sit on right chair
+					mRight = glm::translate(mRight, glm::vec3(rightX, sitY, -0.5f));
+					mRight = glm::rotate(mRight, glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f));
+					// Flip model horizontally so the character faces inward toward center
+					mRight = glm::rotate(mRight, glm::radians(180.0f), glm::vec3(0.0f,1.0f,0.0f));
+					mRight = glm::scale(mRight, glm::vec3(0.25f));
+					ourShader.setMat4("model", mRight);
+
+					int palIndexP2 = (selectedPaletteP2 >=0 && selectedPaletteP2 <4) ? selectedPaletteP2 :0;
+					if (paletteTextures[palIndexP2] !=0) {
+						ourShader.setBool("usePalette", true);
+						ourShader.setBool("flipPaletteHoriz", true);
+						const int PALETTE_TEX_UNIT =15;
+						glActiveTexture(GL_TEXTURE0 + PALETTE_TEX_UNIT);
+						glBindTexture(GL_TEXTURE_2D, paletteTextures[palIndexP2]);
+						ourShader.setInt("paletteTex", PALETTE_TEX_UNIT);
+					}
+					// Draw full model (visible in Won scene too)
+					playerModelP2->Draw(ourShader);
+					if (paletteTextures[palIndexP2] !=0) {
+						glActiveTexture(GL_TEXTURE0 +15);
+						glBindTexture(GL_TEXTURE_2D,0);
+						glActiveTexture(GL_TEXTURE0);
+						ourShader.setBool("usePalette", false);
+					}
+
+					// Restore face culling state after drawing models
+					if (cullEnabledBeforeModelsP2) glEnable(GL_CULL_FACE);
 				}
 
 				// Render table and two chairs (if loaded) placed under the gun
-				if (tableModel) {
-					glm::mat4 modelTable = glm::mat4(1.0f);
-					// Position table slightly higher so it sits closer to UI buttons
-					modelTable = glm::translate(modelTable, glm::vec3(0.0f, -0.5f, -0.2f));
-					// Rotate -90 degrees around X axis as requested
-					modelTable = glm::rotate(modelTable, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-					// Make table smaller so it doesn't dominate the scene
-					modelTable = glm::scale(modelTable, glm::vec3(0.35f));
-					ourShader.setMat4("model", modelTable);
-					tableModel->Draw(ourShader);
-				}
-				if (chairModel) {
-					// Left chair: moved further apart (more to center), moved up slightly, and scaled
-					glm::mat4 modelChairLeft = glm::mat4(1.0f);
-					modelChairLeft = glm::translate(modelChairLeft, glm::vec3(-1.2f, 0.0f, -0.25f)); // further apart on X, moved up on Y, slightly forward on Z
-					modelChairLeft = glm::rotate(modelChairLeft, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-					modelChairLeft = glm::scale(modelChairLeft, glm::vec3(0.25f)); // keep size similar
-					ourShader.setMat4("model", modelChairLeft);
-					chairModel->Draw(ourShader);
+				if (!isWonScene) {
+					if (tableModel) {
+						glm::mat4 modelTable = glm::mat4(1.0f);
+						// Position table slightly higher so it sits closer to UI buttons
+						modelTable = glm::translate(modelTable, glm::vec3(0.0f, -0.5f, -0.2f));
+						// Rotate -90 degrees around X axis as requested
+						modelTable = glm::rotate(modelTable, glm::radians(-90.0f), glm::vec3(1.0f,0.0f,0.0f));
+						// Make table smaller so it doesn't dominate the scene
+						modelTable = glm::scale(modelTable, glm::vec3(0.35f));
+						ourShader.setMat4("model", modelTable);
+						tableModel->Draw(ourShader);
+					}
+					if (chairModel) {
+						// Left chair: moved further apart (more to center), moved up slightly, and scaled
+						glm::mat4 modelChairLeft = glm::mat4(1.0f);
+						modelChairLeft = glm::translate(modelChairLeft, glm::vec3(-1.2f,0.0f, -0.25f)); // further apart on X, moved up on Y, slightly forward on Z
+						modelChairLeft = glm::rotate(modelChairLeft, glm::radians(-90.0f), glm::vec3(0.0f,1.0f,0.0f));
+						modelChairLeft = glm::scale(modelChairLeft, glm::vec3(0.25f)); // keep size similar
+						ourShader.setMat4("model", modelChairLeft);
+						chairModel->Draw(ourShader);
 
-					// Right chair: moved further apart, moved up slightly, and scaled
-					glm::mat4 modelChairRight = glm::mat4(1.0f);
-					modelChairRight = glm::translate(modelChairRight, glm::vec3(1.2f, 0.0f, -0.25f)); // further apart on X, moved up on Y, slightly forward on Z
-					modelChairRight = glm::rotate(modelChairRight, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-					modelChairRight = glm::scale(modelChairRight, glm::vec3(0.25f)); // keep size similar
-					ourShader.setMat4("model", modelChairRight);
-					chairModel->Draw(ourShader);
+						// Right chair: moved further apart, moved up slightly, and scaled
+						glm::mat4 modelChairRight = glm::mat4(1.0f);
+						modelChairRight = glm::translate(modelChairRight, glm::vec3(1.2f,0.0f, -0.25f)); // further apart on X, moved up on Y, slightly forward on Z
+						modelChairRight = glm::rotate(modelChairRight, glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f));
+						modelChairRight = glm::scale(modelChairRight, glm::vec3(0.25f)); // keep size similar
+						ourShader.setMat4("model", modelChairRight);
+						chairModel->Draw(ourShader);
+					}
 				}
 
 				// --- ITEM MODEL RENDERING WITH CUSTOM SCALING AND TRANSLATION ---
-				auto& currentItems = player1Turn ? player1Items : player2Items;
+				if (!isWonScene) {
+					auto& currentItems = player1Turn ? player1Items : player2Items;
 
-				// Fix: Re-calculate Item Slot Positions variables (ITEM_SPACING, itemXBase) here for scope
-				float ITEM_SPACING = ITEM_SLOT_SIZE_NORM * 1.2f;
-				float itemXBase = (1.0f - ITEM_SLOT_SIZE_NORM * 4.0f) / 2.0f - ITEM_SLOT_SIZE_NORM * 0.2f;
+					// Fix: Re-calculate Item Slot Positions variables (ITEM_SPACING, itemXBase) here for scope
+					float ITEM_SPACING = ITEM_SLOT_SIZE_NORM *1.2f;
+					float itemXBase = (1.0f - ITEM_SLOT_SIZE_NORM *4.0f) /2.0f - ITEM_SLOT_SIZE_NORM *0.2f;
 
-				// World coordinate mapping (approximate)
-				float worldX_scale = 10.0f;
+					// World coordinate mapping (approximate)
+					float worldX_scale =10.0f;
 
-				for (int i = 0; i < (int)currentItems.size(); ++i) {
-					ItemType type = currentItems[i];
-					Model* modelToDraw = nullptr;
+					for (int i =0; i < (int)currentItems.size(); ++i) {
+						ItemType type = currentItems[i];
+						Model* modelToDraw = nullptr;
 
-					// Assign model pointer based on type.
-					if (type == ITEM_ROLL) modelToDraw = itemModelRoll;
-					else if (type == ITEM_SKIP) modelToDraw = itemModelSkip;
-					else if (type == ITEM_MOVE_BULLET) modelToDraw = itemModelMove;
+						// Assign model pointer based on type.
+						if (type == ITEM_ROLL) modelToDraw = itemModelRoll;
+						else if (type == ITEM_SKIP) modelToDraw = itemModelSkip;
+						else if (type == ITEM_MOVE_BULLET) modelToDraw = itemModelMove;
 
-					if (modelToDraw) {
-						// SAFE CHECK: Only draw if the model pointer is valid (not nullptr).
-						// Calculate normalized X at the center of the button slot
-						float normX_center = itemXBase + (float)i * ITEM_SPACING + ITEM_SLOT_SIZE_NORM * 0.5f; // center of slot
+						if (modelToDraw) {
+							// SAFE CHECK: Only draw if the model pointer is valid (not nullptr).
+							// Calculate normalized X at the center of the button slot
+							float normX_center = itemXBase + (float)i * ITEM_SPACING + ITEM_SLOT_SIZE_NORM *0.5f; // center of slot
 
-						// Choose normalized Y per item type (different vertical stacks per item)
-						float worldY;
-						if (type == ITEM_ROLL) {
-							worldY = -1.05f;
+							// Choose normalized Y per item type (different vertical stacks per item)
+							float worldY;
+							if (type == ITEM_ROLL) {
+								worldY = -1.05f;
+							}
+							else if (type == ITEM_SKIP) {
+								worldY = -1.0f;
+							}
+							else if (type == ITEM_MOVE_BULLET) {
+								worldY = -0.75f;
+							}
+
+							// Convert normalized screen position to3D world space using the chosen top-middle Y
+							float worldX = (normX_center -0.5f) * worldX_scale;
+							glm::mat4 model = glm::mat4(1.0f);
+
+							model = glm::translate(model, glm::vec3(worldX, worldY,0.0f));
+							// Specific scaling and rotation adjustments for each model
+							float scale =1.0f;
+							if (type == ITEM_ROLL) {
+								// Roll Object: scaled for visibility
+								scale =0.04f;
+								// orient upright
+								model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f,0.0f,0.0f));
+								// Keep roll's rotation but spin around Z axis (bread special case)
+								model = glm::rotate(model, (float)glfwGetTime() * glm::radians(90.0f), glm::vec3(0.0f,0.0f,1.0f));
+							}
+							else if (type == ITEM_SKIP) {
+								// Skip Object: small scale and spin in Y axis
+								scale =0.005f;
+								model = glm::rotate(model, (float)glfwGetTime() * glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f));
+							}
+							else if (type == ITEM_MOVE_BULLET) {
+								// Move Object: scaled2x larger than previous2.0f ->4.0f
+								scale =4.0f;
+								// Add spin around the Y-axis
+								model = glm::rotate(model, (float)glfwGetTime() * glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f));
+							}
+
+							model = glm::scale(model, glm::vec3(scale));
+							ourShader.setMat4("model", model);
+							modelToDraw->Draw(ourShader);
 						}
-						else if (type == ITEM_SKIP) {
-							worldY = -1.0f;
-						}
-						else if (type == ITEM_MOVE_BULLET) {
-							worldY = -0.75f;
-						}
-
-						// Convert normalized screen position to3D world space using the chosen top-middle Y
-						float worldX = (normX_center - 0.5f) * worldX_scale;
-						glm::mat4 model = glm::mat4(1.0f);
-
-						model = glm::translate(model, glm::vec3(worldX, worldY, 0.0f));
-						// Specific scaling and rotation adjustments for each model
-						float scale = 1.0f;
-						if (type == ITEM_ROLL) {
-							// Roll Object: scaled for visibility
-							scale = 0.04f;
-							// orient upright
-							model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-							// Keep roll's rotation but spin around Z axis (bread special case)
-							model = glm::rotate(model, (float)glfwGetTime() * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-						}
-						else if (type == ITEM_SKIP) {
-							// Skip Object: small scale and spin in Y axis
-							scale = 0.005f;
-							model = glm::rotate(model, (float)glfwGetTime() * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-						}
-						else if (type == ITEM_MOVE_BULLET) {
-							// Move Object: scaled2x larger than previous2.0f ->4.0f
-							scale = 4.0f;
-							// Add spin around the Y-axis
-							model = glm::rotate(model, (float)glfwGetTime() * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-						}
-
-						model = glm::scale(model, glm::vec3(scale));
-						ourShader.setMat4("model", model);
-						modelToDraw->Draw(ourShader);
 					}
 				}
 
@@ -1173,7 +1237,7 @@ int main()
 
 			// Ensure UI uses the default texture unit (player palette binding uses unit15)
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, 0);
+			glBindTexture(GL_TEXTURE_2D,0);
 			glDisable(GL_DEPTH_TEST);
 			if (menuShader) menuShader->use();
 			float elapsed = (float)glfwGetTime() - statusImageTime;
@@ -1258,16 +1322,16 @@ int main()
 			// === END UPDATED: Window Title Logic ===
 
 			// Draw Status Image
-			if (currentStatusTex != 0) {
-				if (currentStatusTex == clickTex && elapsed > 0.0f) {
-					alpha = 1.0f - std::min(1.0f, elapsed / STATUS_IMAGE_DURATION);
+			if (currentStatusTex !=0 && !(currentStatusTex == player1WonTex || currentStatusTex == player2WonTex)) {
+				if (currentStatusTex == clickTex && elapsed >0.0f) {
+					alpha =1.0f - std::min(1.0f, elapsed / STATUS_IMAGE_DURATION);
 				}
-				if (menuShader) menuShader->setVec2("offset", glm::vec2(0.0f, 0.0f));
-				if (menuShader) menuShader->setVec2("scale", glm::vec2(1.0f, 1.0f));
+				if (menuShader) menuShader->setVec2("offset", glm::vec2(0.0f,0.0f));
+				if (menuShader) menuShader->setVec2("scale", glm::vec2(1.0f,1.0f));
 				glBindTexture(GL_TEXTURE_2D, currentStatusTex);
-				if (menuShader) menuShader->setVec3("color", glm::vec3(1.0f, 1.0f, 1.0f));
+				if (menuShader) menuShader->setVec3("color", glm::vec3(1.0f,1.0f,1.0f));
 				if (menuShader) menuShader->setFloat("alpha", alpha);
-				renderQuad(0.0f, 1.0f);
+				renderQuad(0.0f,1.0f);
 			}
 
 			// Draw all2D UI elements
@@ -1365,7 +1429,7 @@ int main()
 				// Convert600x640 pixels to normalized screen space
 				float panelW_Norm = 600.0f / SCR_WIDTH;
 				float panelH_Norm = 640.0f / SCR_HEIGHT;
-							// Center the panel
+				// Center the panel
 				float panelX = (1.0f - panelW_Norm) / 2.0f;
 				float panelY = (1.0f - panelH_Norm) / 2.0f;
 				if (menuShader) menuShader->setVec2("offset", glm::vec2(panelX, panelY));
@@ -1374,135 +1438,267 @@ int main()
 				if (menuShader) menuShader->setVec3("color", glm::vec3(1.0f, 1.0f, 1.0f));
 				renderQuad(0.0f, 1.0f);
 			}
+		}
 
-			// If a Won overlay is active, render the two player models again on top of the overlay
-			if ((currentStatusTex == player1WonTex || currentStatusTex == player2WonTex) && ourShader.ID != 0)
+		// ===============================
+		// UI PASS (DEPTH OFF, SAFE)
+		// All UI rendering (menu, HUD, buttons, status overlays) must happen once here
+		// ===============================
+		glDisable(GL_DEPTH_TEST);
+		glDepthMask(GL_FALSE);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		// Menu / Character Select rendering
+		if (currentGameState == STATE_MENU || currentGameState == STATE_SUBMENU_START || currentGameState == STATE_CHAR_SELECT)
+		{
+			if (menuShader) menuShader->use();
+			if (menuShader) menuShader->setFloat("alpha",1.0f);
+			if (menuShader) menuShader->setFloat("vStart",0.0f);
+			if (menuShader) menuShader->setFloat("vEnd",1.0f);
+
+			glBindTexture(GL_TEXTURE_2D, menuBackgroundTex);
+			if (menuShader) menuShader->setVec2("offset", glm::vec2(0.0f,0.0f));
+			if (menuShader) menuShader->setVec2("scale", glm::vec2(1.0f,1.0f));
+			if (menuShader) menuShader->setVec3("color", glm::vec3(0.0f,0.0f,0.1f));
+			renderQuad(0.0f,1.0f);
+
+			for (const auto& button : activeButtons)
 			{
-				// Use the3D shader and set common uniforms
-				ourShader.use();
-				ourShader.setBool("usePalette", false);
-				ourShader.setFloat("alphaCutoff", 0.0f);
-				glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
-				glm::mat4 view = camera.GetViewMatrix();
-				ourShader.setMat4("projection", projection);
-				ourShader.setMat4("view", view);
+				if (menuShader) menuShader->setVec2("offset", button.position);
+				if (menuShader) menuShader->setVec2("scale", button.size);
+				glBindTexture(GL_TEXTURE_2D, button.textureID);
+				if (currentGameState == STATE_CHAR_SELECT) {
+					std::string selTitle = "Character Select | P1:" + std::string((selectedPaletteP1 == -1) ? "None" : std::to_string(selectedPaletteP1))
+					 + " P2:" + std::string((selectedPaletteP2 == -1) ? "None" : std::to_string(selectedPaletteP2));
+					glfwSetWindowTitle(g_window, selTitle.c_str());
 
-				// Temporarily force depth test to always pass so the models render fully on top of the overlay
-				// This prevents parts of the models from being occluded by previously rendered scene depth.
-				GLboolean depthEnabledBefore = glIsEnabled(GL_DEPTH_TEST);
-				GLint prevDepthFunc = 0; glGetIntegerv(GL_DEPTH_FUNC, &prevDepthFunc);
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_ALWAYS);
-
-				// Render Player1 on the RIGHT (player one shown on right as requested)
-				if (playerModelP1) {
-					if (animatorP1) animatorP1->UpdateAnimation(deltaTime);
-					// upload bone matrices
-					if (animatorP1) {
-						auto mats = animatorP1->GetFinalBoneMatrices();
-						for (size_t bi = 0; bi < mats.size() && bi < MAX_BONES; ++bi) {
-							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
-							ourShader.setMat4(name.c_str(), mats[bi]);
-						}
-						for (size_t bi = mats.size(); bi < MAX_BONES; ++bi) {
-							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
-							ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
-						}
+					if (button.actionCode >=20 && button.actionCode <24) {
+						int idx = button.actionCode -20;
+						glm::vec3 color = button.color;
+						if (selectedPaletteP1 == idx) color = glm::vec3(0.4f,1.0f,0.4f);
+						if (selectedPaletteP2 == idx) color = glm::vec3(0.4f,0.4f,1.0f);
+						if (menuShader) menuShader->setVec3("color", color);
+						renderQuad(0.0f,1.0f);
+						continue;
 					}
-					else {
-						for (int bi = 0; bi < MAX_BONES; ++bi) {
-							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
-							ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
-						}
-					}
-
-					glm::mat4 mRight = glm::mat4(1.0f);
-					// Position player1 to the right and slightly in front of the overlay
-					mRight = glm::translate(mRight, glm::vec3(1.2f, -0.6f, -0.5f));
-					// Face inward toward center
-					mRight = glm::rotate(mRight, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-					// Flip to face inward
-					mRight = glm::rotate(mRight, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-					mRight = glm::scale(mRight, glm::vec3(0.22f));
-					ourShader.setMat4("model", mRight);
-
-					// Bind palette if present
-					int palIndexP1 = (selectedPaletteP1 >= 0 && selectedPaletteP1 < 4) ? selectedPaletteP1 : 0;
-					if (paletteTextures[palIndexP1] != 0) {
-						ourShader.setBool("usePalette", true);
-						ourShader.setBool("flipPaletteHoriz", true);
-						const int PALETTE_TEX_UNIT = 15;
-						glActiveTexture(GL_TEXTURE0 + PALETTE_TEX_UNIT);
-						glBindTexture(GL_TEXTURE_2D, paletteTextures[palIndexP1]);
-						ourShader.setInt("paletteTex", PALETTE_TEX_UNIT);
-					}
-					// Draw full model for Won-scene (restore all meshes)
-					playerModelP1->Draw(ourShader);
-					// unbind
-					if (paletteTextures[palIndexP1] != 0) {
-						glActiveTexture(GL_TEXTURE0 + 15);
-						glBindTexture(GL_TEXTURE_2D, 0);
-						glActiveTexture(GL_TEXTURE0);
-						ourShader.setBool("usePalette", false);
+					if (button.actionCode >=30 && button.actionCode <34) {
+						int idx = button.actionCode -30;
+						glm::vec3 color = button.color;
+						if (selectedPaletteP2 == idx) color = glm::vec3(0.4f,0.4f,1.0f);
+						if (selectedPaletteP1 == idx) color = glm::vec3(0.4f,1.0f,0.4f);
+						if (menuShader) menuShader->setVec3("color", color);
+						renderQuad(0.0f,1.0f);
+						continue;
 					}
 				}
-
-				// Render Player2 on the LEFT
-				if (playerModelP2) {
-					if (animatorP2) animatorP2->UpdateAnimation(deltaTime);
-					// upload bone matrices
-					if (animatorP2) {
-						auto mats = animatorP2->GetFinalBoneMatrices();
-						for (size_t bi = 0; bi < mats.size() && bi < MAX_BONES; ++bi) {
-							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
-							ourShader.setMat4(name.c_str(), mats[bi]);
-						}
-						for (size_t bi = mats.size(); bi < MAX_BONES; ++bi) {
-							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
-							ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
-						}
-					}
-					else {
-						for (int bi = 0; bi < MAX_BONES; ++bi) {
-							std::string name = "finalBonesMatrices[" + std::to_string(bi) + "]";
-							ourShader.setMat4(name.c_str(), glm::mat4(1.0f));
-						}
-					}
-
-					glm::mat4 mLeft = glm::mat4(1.0f);
-					// Position player2 to the left and slightly in front of the overlay
-					mLeft = glm::translate(mLeft, glm::vec3(-1.2f, -0.6f, -0.5f));
-					// Face inward toward center
-					mLeft = glm::rotate(mLeft, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-					// Flip to face inward
-					mLeft = glm::rotate(mLeft, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-					mLeft = glm::scale(mLeft, glm::vec3(0.22f));
-					ourShader.setMat4("model", mLeft);
-
-					int palIndexP2 = (selectedPaletteP2 >= 0 && selectedPaletteP2 < 4) ? selectedPaletteP2 : 0;
-					if (paletteTextures[palIndexP2] != 0) {
-						ourShader.setBool("usePalette", true);
-						ourShader.setBool("flipPaletteHoriz", true);
-						const int PALETTE_TEX_UNIT = 15;
-						glActiveTexture(GL_TEXTURE0 + PALETTE_TEX_UNIT);
-						glBindTexture(GL_TEXTURE_2D, paletteTextures[palIndexP2]);
-						ourShader.setInt("paletteTex", PALETTE_TEX_UNIT);
-					}
-					// Draw full model for Won-scene (restore all meshes)
-					playerModelP2->Draw(ourShader);
-					if (paletteTextures[palIndexP2] != 0) {
-						glActiveTexture(GL_TEXTURE0 + 15);
-						glBindTexture(GL_TEXTURE_2D, 0);
-						glActiveTexture(GL_TEXTURE0);
-						ourShader.setBool("usePalette", false);
-					}
-				}
-
-				// Restore previous depth function/state
-				glDepthFunc(prevDepthFunc);
-				if (!depthEnabledBefore) glDisable(GL_DEPTH_TEST);
+				if (menuShader) menuShader->setVec3("color", button.color);
+				renderQuad(0.0f,1.0f);
 			}
 		}
+		else if (currentGameState == STATE_CREDITS)
+		{
+			// Keep credits clear behavior (solid color) here; actual UI rendering for credit buttons moved to UI pass.
+			glDisable(GL_DEPTH_TEST);
+			glClearColor(0.0f, 0.0f, 0.3f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT);
+		}
+		else if (currentGameState == STATE_GAME)
+		{
+			// Game UI rendering (status overlays, buttons, item panels)
+			// Ensure UI uses the default texture unit (player palette binding uses unit15)
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			if (menuShader) menuShader->use();
+			float elapsed = (float)glfwGetTime() - statusImageTime;
+			float alpha = 1.0f;
+
+			if (currentStatusTex == player1WonTex || currentStatusTex == player2WonTex) {
+				alpha = 0.65f;
+			}
+
+			bool showActionUI = true;
+			showActionUI = currentStatusTex != player1GotTex && currentStatusTex != player2GotTex && currentStatusTex != player1WonTex && currentStatusTex != player2WonTex;
+			if (isPlayerTurnIndicator(currentStatusTex) || currentStatusTex == clickTex) showActionUI = false;
+
+			if (gameOver) {
+				if (elapsed > GAME_OVER_TRANSITION_DELAY && (currentStatusTex == player1GotTex || currentStatusTex == player2GotTex)) {
+					currentStatusTex = (currentStatusTex == player1GotTex) ? player2WonTex : player1WonTex;
+				}
+			}
+			else if (currentStatusTex != 0) {
+				if (isPlayerTurnIndicator(currentStatusTex)) {
+					if (elapsed > TURN_SKIP_DURATION) {
+						currentStatusTex = 0;
+						showActionUI = true; // Show actions when indicator disappears
+					}
+				}
+				else if (currentStatusTex == clickTex) {
+					if (elapsed > STATUS_IMAGE_DURATION) {
+						currentStatusTex = 0;
+						currentStatusTex = player1Turn ? player1Tex : player2Tex;
+						statusImageTime = (float)glfwGetTime();
+						showActionUI = false;
+					}
+					else {
+						showActionUI = false;
+					}
+				}
+			}
+
+			//3. Manual Skip Handling
+			if (currentStatusTex == 0 && !gameOver) {
+				if (turnIndicatorSkippedManually) {
+					turnIndicatorSkippedManually = false;
+					showActionUI = true;
+				}
+			}
+
+			// === UPDATED: Real-time Window Title Logic ===
+			std::string baseTitle = "Bullet Gambit | " + gameMessage;
+			if (!gameOver) {
+				if (showActionUI || showItemDescription) { // Show item list if action is possible or description is open
+					// Append item list and action guide when player can act
+					std::string itemStatus = player1Turn ? "P1 Items: " : "P2 Items: ";
+					auto& items = player1Turn ? player1Items : player2Items;
+					for (int i = 0; i < 4; ++i) {
+						if (i < (int)items.size())
+							itemStatus += "[" + std::to_string(i + 1) + ":" + itemName(items[i]) + "] ";
+						else
+							itemStatus += "[" + std::to_string(i + 1) + ":Empty] ";
+					}
+					baseTitle += " | " + itemStatus;
+					baseTitle += "| Action: Click Safe/Foe Buttons |1-4: Use Item | R: Restart";
+				}
+				else {
+					// Show minimal message when status image is covering
+					baseTitle += " | Waiting for action (Click or wait to continue)...";
+				}
+			}
+			glfwSetWindowTitle(g_window, baseTitle.c_str());
+			// === END UPDATED: Window Title Logic ===
+
+			// Draw Status Image
+			if (currentStatusTex !=0 && !(currentStatusTex == player1WonTex || currentStatusTex == player2WonTex)) {
+				if (currentStatusTex == clickTex && elapsed >0.0f) {
+					alpha =1.0f - std::min(1.0f, elapsed / STATUS_IMAGE_DURATION);
+				}
+				if (menuShader) menuShader->setVec2("offset", glm::vec2(0.0f,0.0f));
+				if (menuShader) menuShader->setVec2("scale", glm::vec2(1.0f,1.0f));
+				glBindTexture(GL_TEXTURE_2D, currentStatusTex);
+				if (menuShader) menuShader->setVec3("color", glm::vec3(1.0f,1.0f,1.0f));
+				if (menuShader) menuShader->setFloat("alpha", alpha);
+				renderQuad(0.0f,1.0f);
+			}
+
+			// Draw all2D UI elements
+			if (menuShader) menuShader->setFloat("alpha", 1.0f);
+			for (const auto& button : activeButtons) {
+				bool showButton = false;
+				glm::vec3 finalColor = button.color;
+
+				// Determine visibility based on game state
+				bool isWonScene = (currentStatusTex == player1WonTex || currentStatusTex == player2WonTex);
+
+				// Show the button if it's part of the action phase AND showActionUI is true
+				if (button.isGameAction || button.actionCode == 3 || button.actionCode == 4) { // Action (Safe/Foe), Back, Description
+					showButton = showActionUI;
+
+					// NEW: Back button exception for Game Over 'Won' state (actionCode3)
+					if (button.actionCode == 3 && isWonScene) {
+						showButton = true;
+					}
+
+					// Special case for 'Description' button: always show it if not game over and not in a turn indicator state
+					if (button.actionCode == 4 && !gameOver && !isPlayerTurnIndicator(currentStatusTex) && currentStatusTex != clickTex) {
+						showButton = true;
+					}
+				}
+				else if (button.isItemSlot) {
+					// MODIFIED: Item slots are now hidden when Safe/Foe are hidden (controlled by showActionUI)
+					showButton = showActionUI && currentGameState == STATE_GAME;
+
+					// Dim item slots if in cooldown OR description is shown
+					if (showButton && (((float)glfwGetTime() - lastActionTime < MIN_TURN_DELAY) || showItemDescription)) {
+						finalColor = finalColor * 0.5f + glm::vec3(0.1f, 0.1f, 0.1f);
+					}
+				}
+				// Other buttons (Menu/Submenu)
+				else if (currentGameState == STATE_MENU || currentGameState == STATE_SUBMENU_START) {
+					showButton = true;
+				}
+				else if (currentGameState == STATE_CREDITS) {
+					// Only the back button is shown in credits, which is handled by actionCode3
+					if (button.actionCode == 3) showButton = true;
+				}
+
+				if (!showButton) continue;
+
+				if (menuShader) menuShader->setVec2("offset", button.position);
+				if (menuShader) menuShader->setVec2("scale", button.size);
+				glBindTexture(GL_TEXTURE_2D, button.textureID);
+				if (menuShader) menuShader->setVec3("color", finalColor);
+
+				// Handle Item Slot Textures and Cooldowns
+				if (button.isItemSlot && currentGameState == STATE_GAME) {
+					int slotIndex = button.actionCode - 10;
+					auto& items = player1Turn ? player1Items : player2Items;
+					ItemType itemType = ITEM_NONE;
+					if (slotIndex >= 0 && slotIndex < (int)items.size()) {
+						itemType = items[slotIndex];
+					}
+					else {
+						// Empty slots are dimmed
+						finalColor = finalColor * 0.5f + glm::vec3(0.3f, 0.3f, 0.3f) * 0.5f;
+					}
+					if (menuShader) menuShader->setVec3("color", finalColor);
+					float vStart, vEnd;
+					getItemUVs(itemType, vStart, vEnd);
+					renderQuad(vStart, vEnd);
+				}
+				else {
+					// Render normal buttons (Safe, Foe, Back, Description, Menu buttons)
+					renderQuad(0.0f, 1.0f);
+				}
+			}
+
+			// --- MODIFIED: Draw Restart Button in Won Scene (Position lowered, Size smaller) ---
+			if (currentStatusTex == player1WonTex || currentStatusTex == player2WonTex) {
+				// Define button properties for rendering
+				MenuButton restartBtn;
+				restartBtn.textureID = restartButtonTex;
+				// Size reduced to1.0f
+				restartBtn.size = glm::vec2(BUTTON_WIDTH_NORM * 1.0f, BUTTON_HEIGHT_NORM * 1.0f);
+				// Position is MARGIN_Y, which is the bottom edge
+				restartBtn.position = glm::vec2((1.0f - restartBtn.size.x) / 2.0f, MARGIN_Y);
+				restartBtn.color = glm::vec3(1.0f, 1.0f, 1.0f);
+
+				// Render the restart button
+				if (menuShader) menuShader->setVec2("offset", restartBtn.position);
+				if (menuShader) menuShader->setVec2("scale", restartBtn.size);
+				glBindTexture(GL_TEXTURE_2D, restartButtonTex);
+				if (menuShader) menuShader->setVec3("color", restartBtn.color);
+				renderQuad(0.0f, 1.0f);
+			}
+
+			// Draw Item Description Panel (if active)
+			if (showItemDescription) {
+				// Convert600x640 pixels to normalized screen space
+				float panelW_Norm = 600.0f / SCR_WIDTH;
+				float panelH_Norm = 640.0f / SCR_HEIGHT;
+				// Center the panel
+				float panelX = (1.0f - panelW_Norm) / 2.0f;
+				float panelY = (1.0f - panelH_Norm) / 2.0f;
+				if (menuShader) menuShader->setVec2("offset", glm::vec2(panelX, panelY));
+				if (menuShader) menuShader->setVec2("scale", glm::vec2(panelW_Norm, panelH_Norm));
+				glBindTexture(GL_TEXTURE_2D, itemDescriptionPanelTex);
+				if (menuShader) menuShader->setVec3("color", glm::vec3(1.0f, 1.0f, 1.0f));
+				renderQuad(0.0f, 1.0f);
+			}
+		}
+
+		// Restore depth write to avoid affecting subsequent frames or other code
+		glDepthMask(GL_TRUE);
 
 		// --- END of frame rendering inside main loop
 		// Add GLFW event polling and buffer swap so the window remains responsive
@@ -1560,7 +1756,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 		float maxY = restartBtn.position.y + restartBtn.size.y;
 		if (normX >= minX && normX <= maxX && normY >= minY && normY <= maxY) {
 			buttonClicked = true;
-			setupGameButtons();
+			// Initialize game state first which will rebuild the buttons
 			startGameInit();
 			return;
 		}
@@ -1591,11 +1787,18 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 				if (btn.actionCode == 5) {
 					if (selectedPaletteP1 != -1 && selectedPaletteP2 != -1) {
 						currentGameState = STATE_GAME;
-						setupGameButtons(); startGameInit();
+						// startGameInit will set player1Turn = true and call setupGameButtons()
+						startGameInit();
 					}
 					else {
 						std::cout << "Both players must select a palette before proceeding." << std::endl;
 					}
+					return;
+				}
+				// Back button in character select should return to main menu (actionCode ==3)
+				if (btn.actionCode == 3) {
+					setupMainMenu();
+					currentGameState = STATE_MENU;
 					return;
 				}
 			}
@@ -1614,7 +1817,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 					if (btn.actionCode == 4 && !gameOver && !isPlayerTurnIndicator(currentStatusTex) && currentStatusTex != clickTex) isVisible = true;
 				}
 				else if (btn.isItemSlot) {
-					isVisible = showActionUI;
+					isVisible = showActionUI && currentGameState == STATE_GAME;
 				}
 
 				if (!isVisible) continue;
@@ -1628,7 +1831,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 				else {
 					currentGameState = btn.nextState;
 					if (currentGameState == STATE_SUBMENU_START) setupStartSubMenu();
-					else if (currentGameState == STATE_GAME) { setupGameButtons(); startGameInit(); }
+					else if (currentGameState == STATE_GAME) { startGameInit(); }
 					else if (currentGameState == STATE_MENU) setupMainMenu();
 					else if (currentGameState == STATE_CREDITS) { activeButtons.clear(); activeButtons.push_back({ backButtonTex, glm::vec2(MARGIN_X, MARGIN_Y), glm::vec2(BUTTON_WIDTH_NORM * 0.5f, BUTTON_HEIGHT_NORM * 0.5f), STATE_MENU, false,3, glm::vec3(1.0f) }); }
 					else if (currentGameState == STATE_CHAR_SELECT) { charSelectingPlayer = 1; selectedPaletteP1 = -1; selectedPaletteP2 = -1; setupCharacterSelect(); }
