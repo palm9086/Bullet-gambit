@@ -93,14 +93,16 @@ std::unordered_map<unsigned int, glm::vec2> textureSizes;
 const int MAX_BONES = 100; // increased to support models with many bones/meshes
 
 std::vector<MenuButton> activeButtons;
-	unsigned int quadVAO = 0;
-	Shader* menuShader = nullptr;
-	Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
-	float lastX = SCR_WIDTH / 2.0f, lastY = SCR_HEIGHT / 2.0f;
-	bool firstMouse = true;
-	float deltaTime = 0.0f, lastFrame = 0.0f;
-	float lastActionTime = 0.0f;
-	Model* gunModel = nullptr;
+unsigned int quadVAO = 0;
+Shader* menuShader = nullptr;
+Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
+float lastX = SCR_WIDTH / 2.0f;
+float lastY = SCR_HEIGHT / 2.0f;
+bool firstMouse = true;
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+float lastActionTime = 0.0f;
+Model* gunModel = nullptr;
 // --- UPDATED MODEL POINTERS ---
 Model* itemModelRoll = nullptr;
 Model* itemModelSkip = nullptr;
@@ -109,6 +111,32 @@ Model* itemModelMove = nullptr;
 Model* tableModel = nullptr;
 Model* chairModel = nullptr;
 // --- END UPDATED MODEL POINTERS ---
+
+// === Configurable model position/scale offsets (tweak here) ===
+glm::vec3 g_gunPos = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 g_playerLeftPos = glm::vec3(-1.6f, -1.0f, -0.5f);
+glm::vec3 g_playerRightPos = glm::vec3(1.6f, -1.0f, -0.5f);
+glm::vec3 g_playerLeftPosWin = glm::vec3(-2.2f, -1.4f, -0.5f);
+glm::vec3 g_playerRightPosWin = glm::vec3(2.2f, -1.4f, -0.5f);
+
+glm::vec3 g_tablePos = glm::vec3(0.0f, -0.9f, -0.2f);
+glm::vec3 g_chairLeftPos = glm::vec3(-2.0f, 0.2f, -0.25f);
+glm::vec3 g_chairRightPos = glm::vec3(2.0f, 0.2f, -0.25f);
+
+float g_gunScale = 0.5f;
+float g_playerScale = 0.25f;
+float g_tableScale = 0.35f;
+float g_chairScale = 0.25f;
+
+// Item placement globals
+float g_worldXScale = 10.0f; // item slots -> world X multiplier
+float g_worldYScale = 5.0f;  // item slots -> world Y multiplier (new)
+float g_itemXOffset = 0.0f;  // global X offset applied to all items (move left/right)
+float g_itemZ = 0.2f;        // global Z position for items
+float g_itemY_roll = -1.05f;
+float g_itemY_skip = -1.00f;
+float g_itemY_move = -0.75f;
+// === End configurable globals ===
 
 GLFWwindow* g_window = nullptr;
 
@@ -626,9 +654,9 @@ void setupMainMenu() {
 	activeButtons.clear();
 
 	// Get normalized sizes for each menu texture (use actual image sizes)
-	glm::vec2 quitSize = getNormalizedSize(quitButtonTex);
-	glm::vec2 creditSize = getNormalizedSize(creditButtonTex);
-	glm::vec2 startSize = getNormalizedSize(startButtonTex);
+	glm::vec2 quitSize = getNormalizedSize(quitButtonTex)*2.0f;
+	glm::vec2 creditSize = getNormalizedSize(creditButtonTex)*2.0f;
+	glm::vec2 startSize = getNormalizedSize(startButtonTex)*2.0f;
 
 	// spacing between stacked buttons (normalized)
 	float gap = 0.05f;
@@ -671,8 +699,8 @@ void setupStartSubMenu() {
 	}
 
 	// Get sizes for sub-buttons from their textures
-	glm::vec2 twoSize = getNormalizedSize(twoPlayerButtonTex);
-	glm::vec2 botSize = getNormalizedSize(botButtonTex);
+	glm::vec2 twoSize = getNormalizedSize(twoPlayerButtonTex)*2.0f;
+	glm::vec2 botSize = getNormalizedSize(botButtonTex) * 2.0f;
 
 	// Place sub-buttons to the right of start button with small gap, align vertically centered to start
 	float gap = 0.02f;
@@ -691,8 +719,8 @@ void setupGameButtons() {
 	unsigned int leftTex = (player1Turn ? safeButtonTex : foeButtonTex); // left corresponds to player1
 	unsigned int rightTex = (player1Turn ? foeButtonTex : safeButtonTex); // right corresponds to player2
 
-	glm::vec2 leftSize = getNormalizedSize(leftTex);
-	glm::vec2 rightSize = getNormalizedSize(rightTex);
+	glm::vec2 leftSize = getNormalizedSize(leftTex) * 2.0f;
+	glm::vec2 rightSize = getNormalizedSize(rightTex) * 2.0f;
 
 	// Increase horizontal spacing so buttons are further apart
 	float H_SPACING =0.20f; // larger normalized spacing
@@ -713,8 +741,8 @@ void setupGameButtons() {
 	activeButtons.push_back({ rightTex, glm::vec2(startX + leftSize.x + H_SPACING, btnY + (maxH - rightSize.y) /2.0f), rightSize, STATE_GAME, true, rightAction, rightColor });
 
 	// Top-left/back and top-right/description should use their texture sizes
-	glm::vec2 backSize = getNormalizedSize(backButtonTex);
-	glm::vec2 descSize = getNormalizedSize(descriptionButtonTex);
+	glm::vec2 backSize = getNormalizedSize(backButtonTex) * 2.0f;
+	glm::vec2 descSize = getNormalizedSize(descriptionButtonTex) * 2.0f;
 
 	activeButtons.push_back({ backButtonTex, glm::vec2(MARGIN_X,1.0f - MARGIN_Y - backSize.y), backSize, STATE_MENU, false,3, glm::vec3(1.0f,1.0f,1.0f) });
 	activeButtons.push_back({ descriptionButtonTex, glm::vec2(1.0f - MARGIN_X - descSize.x,1.0f - MARGIN_Y - descSize.y), descSize, STATE_GAME, false,4, glm::vec3(1.0f,1.0f,1.0f) });
@@ -724,10 +752,17 @@ void setupGameButtons() {
 	float itemXBase = (1.0f - ITEM_SLOT_SIZE_NORM *4.0f) /2.0f - ITEM_SLOT_SIZE_NORM *0.2f;
 	float itemY = MARGIN_Y; // Bottom
 	for (int i =0; i <4; ++i) {
+		unsigned int slotTex = (i ==0 ? slot1Tex : (i ==1 ? slot2Tex : (i ==2 ? slot3Tex : slot4Tex)));
+		// Use actual texture pixel sizes to compute a normalized size that preserves aspect ratio.
+		glm::vec2 normTex = getNormalizedSize(slotTex)*0.75f; // returns (w_norm, h_norm)
+		// We want the slot height to equal ITEM_SLOT_SIZE_NORM; compute scale factor based on texture's normalized height.
+		float scaleFactor = 1.0f;
+		glm::vec2 slotSize = glm::vec2(normTex.x * scaleFactor, ITEM_SLOT_SIZE_NORM);
+		// Push button using the computed slotSize so aspect is preserved
 		activeButtons.push_back({
-			(i ==0 ? slot1Tex : (i ==1 ? slot2Tex : (i ==2 ? slot3Tex : slot4Tex))),
+			slotTex,
 			glm::vec2(itemXBase + (float)i * ITEM_SPACING, itemY), // Use ITEM_SPACING here
-			glm::vec2(ITEM_SLOT_SIZE_NORM, ITEM_SLOT_SIZE_NORM),
+			slotSize,
 			STATE_GAME,
 			false,
 			10 + i,
@@ -736,6 +771,7 @@ void setupGameButtons() {
 			});
 	}
 }
+
 
 // Implement setupCharacterSelect
 void setupCharacterSelect()
@@ -759,12 +795,12 @@ void setupCharacterSelect()
 	}
 
 	// Back button (bottom-left)
-	glm::vec2 backSize = getNormalizedSize(backButtonTex);
-	activeButtons.push_back({ backButtonTex, glm::vec2(MARGIN_X, MARGIN_Y), backSize, STATE_MENU, false,3, glm::vec3(1.0f,1.0f,1.0f) });
+	glm::vec2 backSize = getNormalizedSize(backButtonTex) * 2.0f;
+	activeButtons.push_back({ backButtonTex, glm::vec2(MARGIN_X-0.01f, MARGIN_Y), backSize, STATE_MENU, false,3, glm::vec3(1.0f,1.0f,1.0f) });
 
 	// Next / Play button on bottom-right (reuse startButtonTex as requested), actionCode5
-	glm::vec2 nextSize = getNormalizedSize(startButtonTex);
-	activeButtons.push_back({ startButtonTex, glm::vec2(1.0f - MARGIN_X - nextSize.x, MARGIN_Y), nextSize, STATE_GAME, false,5, glm::vec3(1.0f,1.0f,1.0f) });
+	glm::vec2 nextSize = getNormalizedSize(startButtonTex) * 2.0f;
+	activeButtons.push_back({ startButtonTex, glm::vec2(1.0f - MARGIN_X - nextSize.x + 0.01f, MARGIN_Y), nextSize, STATE_GAME, false,5, glm::vec3(1.0f,1.0f,1.0f) });
 }
 
 // ====================================================
@@ -1053,7 +1089,7 @@ int main()
 					mLeft = glm::rotate(mLeft, glm::radians(-90.0f), glm::vec3(0.0f,1.0f,0.0f));
 					// Flip model horizontally so the character faces inward toward center
 					mLeft = glm::rotate(mLeft, glm::radians(180.0f), glm::vec3(0.0f,1.0f,0.0f));
-					mLeft = glm::scale(mLeft, glm::vec3(0.25f));
+					mLeft = glm::scale(mLeft, glm::vec3(g_playerScale));
 					ourShader.setMat4("model", mLeft);
 
 					// Bind palette for P1 if available
@@ -1115,7 +1151,7 @@ int main()
 					mRight = glm::rotate(mRight, glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f));
 					// Flip model horizontally so the character faces inward toward center
 					mRight = glm::rotate(mRight, glm::radians(180.0f), glm::vec3(0.0f,1.0f,0.0f));
-					mRight = glm::scale(mRight, glm::vec3(0.25f));
+					mRight = glm::scale(mRight, glm::vec3(g_playerScale));
 					ourShader.setMat4("model", mRight);
 
 					int palIndexP2 = (selectedPaletteP2 >=0 && selectedPaletteP2 <4) ? selectedPaletteP2 :0;
@@ -1145,28 +1181,28 @@ int main()
 					if (tableModel) {
 						glm::mat4 modelTable = glm::mat4(1.0f);
 						// Position table slightly higher so it sits closer to UI buttons
-						modelTable = glm::translate(modelTable, glm::vec3(0.0f, -0.5f, -0.2f));
+						modelTable = glm::translate(modelTable, g_tablePos);
 						// Rotate -90 degrees around X axis as requested
 						modelTable = glm::rotate(modelTable, glm::radians(-90.0f), glm::vec3(1.0f,0.0f,0.0f));
 						// Make table smaller so it doesn't dominate the scene
-						modelTable = glm::scale(modelTable, glm::vec3(0.35f));
+						modelTable = glm::scale(modelTable, glm::vec3(g_tableScale));
 						ourShader.setMat4("model", modelTable);
 						tableModel->Draw(ourShader);
 					}
 					if (chairModel) {
 						// Left chair: moved further apart (more to center), moved up slightly, and scaled
 						glm::mat4 modelChairLeft = glm::mat4(1.0f);
-						modelChairLeft = glm::translate(modelChairLeft, glm::vec3(-1.2f,0.0f, -0.25f)); // further apart on X, moved up on Y, slightly forward on Z
+						modelChairLeft = glm::translate(modelChairLeft, g_chairLeftPos); // further apart on X, moved up on Y, slightly forward on Z
 						modelChairLeft = glm::rotate(modelChairLeft, glm::radians(-90.0f), glm::vec3(0.0f,1.0f,0.0f));
-						modelChairLeft = glm::scale(modelChairLeft, glm::vec3(0.25f)); // keep size similar
+						modelChairLeft = glm::scale(modelChairLeft, glm::vec3(g_chairScale)); // keep size similar
 						ourShader.setMat4("model", modelChairLeft);
 						chairModel->Draw(ourShader);
 
 						// Right chair: moved further apart, moved up slightly, and scaled
 						glm::mat4 modelChairRight = glm::mat4(1.0f);
-						modelChairRight = glm::translate(modelChairRight, glm::vec3(1.2f,0.0f, -0.25f)); // further apart on X, moved up on Y, slightly forward on Z
+						modelChairRight = glm::translate(modelChairRight, g_chairRightPos); // further apart on X, moved up on Y, slightly forward on Z
 						modelChairRight = glm::rotate(modelChairRight, glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f));
-						modelChairRight = glm::scale(modelChairRight, glm::vec3(0.25f)); // keep size similar
+						modelChairRight = glm::scale(modelChairRight, glm::vec3(g_chairScale)); // keep size similar
 						ourShader.setMat4("model", modelChairRight);
 						chairModel->Draw(ourShader);
 					}
@@ -1179,9 +1215,10 @@ int main()
 					// Fix: Re-calculate Item Slot Positions variables (ITEM_SPACING, itemXBase) here for scope
 					float ITEM_SPACING = ITEM_SLOT_SIZE_NORM *1.2f;
 					float itemXBase = (1.0f - ITEM_SLOT_SIZE_NORM *4.0f) /2.0f - ITEM_SLOT_SIZE_NORM *0.2f;
+					float itemY = MARGIN_Y; // <-- ensure itemY is defined for positioning
 
 					// World coordinate mapping (approximate)
-					float worldX_scale =10.0f;
+					// float worldX_scale =10.0f;
 
 					for (int i =0; i < (int)currentItems.size(); ++i) {
 						ItemType type = currentItems[i];
@@ -1197,23 +1234,32 @@ int main()
 							// Calculate normalized X at the center of the button slot
 							float normX_center = itemXBase + (float)i * ITEM_SPACING + ITEM_SLOT_SIZE_NORM *0.5f; // center of slot
 
-							// Choose normalized Y per item type (different vertical stacks per item)
-							float worldY;
-							if (type == ITEM_ROLL) {
-								worldY = -1.05f;
-							}
-							else if (type == ITEM_SKIP) {
-								worldY = -1.0f;
-							}
-							else if (type == ITEM_MOVE_BULLET) {
-								worldY = -0.75f;
+							// Attempt to find the precise UI slot button so we can position the model exactly above it
+							float uiCenterX = normX_center;
+							float uiTopY = itemY + ITEM_SLOT_SIZE_NORM; // fallback top y
+							for (const auto& b : activeButtons) {
+								if (b.isItemSlot && b.actionCode == 10 + i) {
+									uiCenterX = b.position.x + b.size.x * 0.5f;
+									uiTopY = b.position.y + b.size.y; // top edge of the slot
+									break;
+								}
 							}
 
-							// Convert normalized screen position to3D world space using the chosen top-middle Y
-							float worldX = (normX_center -0.5f) * worldX_scale;
+							// Choose normalized Y per item type (we keep a small base offset defined by g_itemY_)
+							float baseWorldY;
+							if (type == ITEM_ROLL) baseWorldY = g_itemY_roll;
+							else if (type == ITEM_SKIP) baseWorldY = g_itemY_skip;
+							else baseWorldY = g_itemY_move;
+
+							// Convert normalized screen position to 3D world space
+							float worldX = (uiCenterX - 0.5f) * g_worldXScale;
+							// Map UI top Y into a small world offset so the model sits above the slot
+							float worldYOffset = (uiTopY - 0.5f) * g_worldYScale;
+							float worldY = baseWorldY + worldYOffset;
+
 							glm::mat4 model = glm::mat4(1.0f);
 
-							model = glm::translate(model, glm::vec3(worldX, worldY,0.0f));
+							model = glm::translate(model, glm::vec3(worldX + g_itemXOffset, worldY, g_itemZ));
 							// Specific scaling and rotation adjustments for each model
 							float scale =1.0f;
 							if (type == ITEM_ROLL) {
@@ -1858,7 +1904,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 			// Visibility check for game-state
 			if (currentGameState == STATE_GAME) {
 				bool showActionUI = currentStatusTex != player1GotTex && currentStatusTex != player2GotTex && currentStatusTex != player1WonTex && currentStatusTex != player2WonTex;
-				if (isPlayerTurnIndicator(currentStatusTex) || currentStatusTex == clickTex) showActionUI = false;
+				if (isPlayerTurnIndicator(currentStatusTex) && currentGameState == STATE_GAME) return;
 				bool isVisible = false;
 				bool isWonScene = (currentStatusTex == player1WonTex || currentStatusTex == player2WonTex);
 
