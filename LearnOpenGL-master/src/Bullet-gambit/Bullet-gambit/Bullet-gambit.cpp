@@ -64,11 +64,17 @@ unsigned int backButtonTex = 0;
 unsigned int descriptionButtonTex = 0;
 unsigned int itemDescriptionPanelTex = 0;
 unsigned int slot1Tex = 0, slot2Tex = 0, slot3Tex = 0, slot4Tex = 0;
-unsigned int restartButtonTex = 0;
+unsigned int restartButtonTex =0;
+
+// Credit textures and timing for credits sequence
+unsigned int creditTextures[3] = {0,0,0 };
+float creditStartTime =0.0f;
+const float CREDIT_IMAGE_DURATION =5.0f; // seconds per image
+const float CREDIT_FADE_DURATION =1.0f; // crossfade duration (seconds)
 
 // Player/NecoArc models removed to avoid loading/rendering issues.
 // Palette textures remain available for UI (set to0 if not used).
-unsigned int paletteTextures[4] = { 0,0,0,0 };
+unsigned int paletteTextures[4] = {0,0,0,0 };
 int selectedPaletteP1 = 0; // default palette0
 int selectedPaletteP2 = 0; // default palette0
 
@@ -860,6 +866,11 @@ int main()
 	// NEW: Load Restart Button Texture
 	restartButtonTex = loadTexture("resources/textures/menu/Restart.png", true);
 
+	// Load credit textures (3 images)
+	creditTextures[0] = loadTexture("resources/textures/credit/1.png", true);
+	creditTextures[1] = loadTexture("resources/textures/credit/2.png", true);
+	creditTextures[2] = loadTexture("resources/textures/credit/3.png", true);
+
 
 	setupMainMenu();
 
@@ -1498,10 +1509,51 @@ int main()
 		}
 		else if (currentGameState == STATE_CREDITS)
 		{
-			// Keep credits clear behavior (solid color) here; actual UI rendering for credit buttons moved to UI pass.
-			glDisable(GL_DEPTH_TEST);
-			glClearColor(0.0f, 0.0f, 0.3f, 1.0f);
-			glClear(GL_COLOR_BUFFER_BIT);
+			// Render credits: fullscreen crossfade between three images
+			if (menuShader) menuShader->use();
+
+			float totalElapsed = (float)glfwGetTime() - creditStartTime;
+			const float totalDuration = CREDIT_IMAGE_DURATION *3.0f; //3 images
+			if (totalElapsed >= totalDuration) {
+				// finished credits, go back to menu
+				setupMainMenu();
+				currentGameState = STATE_MENU;
+			}
+			else {
+				int idx = (int)(totalElapsed / CREDIT_IMAGE_DURATION);
+				if (idx <0) idx =0; if (idx >2) idx =2;
+				float inSegment = totalElapsed - idx * CREDIT_IMAGE_DURATION; // time into current segment
+				float alphaCurr =1.0f;
+				float alphaNext =0.0f;
+				if (inSegment > (CREDIT_IMAGE_DURATION - CREDIT_FADE_DURATION)) {
+					float t = (inSegment - (CREDIT_IMAGE_DURATION - CREDIT_FADE_DURATION)) / CREDIT_FADE_DURATION;
+					alphaCurr =1.0f - t;
+					alphaNext = t;
+				}
+
+				// Draw current image
+				if (creditTextures[idx] !=0) {
+					if (menuShader) menuShader->setFloat("alpha", alphaCurr);
+					if (menuShader) menuShader->setVec2("offset", glm::vec2(0.0f,0.0f));
+					if (menuShader) menuShader->setVec2("scale", glm::vec2(1.0f,1.0f));
+					glBindTexture(GL_TEXTURE_2D, creditTextures[idx]);
+					if (menuShader) menuShader->setVec3("color", glm::vec3(1.0f));
+					renderQuad(0.0f,1.0f);
+				}
+
+				// Draw next image fading in
+				int nextIdx = (idx +1) %3;
+				if (alphaNext >0.0f && creditTextures[nextIdx] !=0) {
+					if (menuShader) menuShader->setFloat("alpha", alphaNext);
+					if (menuShader) menuShader->setVec2("offset", glm::vec2(0.0f,0.0f));
+					if (menuShader) menuShader->setVec2("scale", glm::vec2(1.0f,1.0f));
+					glBindTexture(GL_TEXTURE_2D, creditTextures[nextIdx]);
+					if (menuShader) menuShader->setVec3("color", glm::vec3(1.0f));
+					renderQuad(0.0f,1.0f);
+				}
+
+				if (menuShader) menuShader->setFloat("alpha",1.0f);
+			}
 		}
 		else if (currentGameState == STATE_GAME)
 		{
@@ -1807,7 +1859,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 			if (currentGameState == STATE_GAME) {
 				bool showActionUI = currentStatusTex != player1GotTex && currentStatusTex != player2GotTex && currentStatusTex != player1WonTex && currentStatusTex != player2WonTex;
 				if (isPlayerTurnIndicator(currentStatusTex) || currentStatusTex == clickTex) showActionUI = false;
-
 				bool isVisible = false;
 				bool isWonScene = (currentStatusTex == player1WonTex || currentStatusTex == player2WonTex);
 
@@ -1833,9 +1884,11 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 					if (currentGameState == STATE_SUBMENU_START) setupStartSubMenu();
 					else if (currentGameState == STATE_GAME) { startGameInit(); }
 					else if (currentGameState == STATE_MENU) setupMainMenu();
-					else if (currentGameState == STATE_CREDITS) { activeButtons.clear(); activeButtons.push_back({ backButtonTex, glm::vec2(MARGIN_X, MARGIN_Y), glm::vec2(BUTTON_WIDTH_NORM * 0.5f, BUTTON_HEIGHT_NORM * 0.5f), STATE_MENU, false,3, glm::vec3(1.0f) }); }
-					else if (currentGameState == STATE_CHAR_SELECT) { charSelectingPlayer = 1; selectedPaletteP1 = -1; selectedPaletteP2 = -1; setupCharacterSelect(); }
+					else if (currentGameState == STATE_CREDITS) { activeButtons.clear(); activeButtons.push_back({ backButtonTex, glm::vec2(MARGIN_X, MARGIN_Y), glm::vec2(BUTTON_WIDTH_NORM *0.5f, BUTTON_HEIGHT_NORM *0.5f), STATE_MENU, false,3, glm::vec3(1.0f) }); }
+					else if (currentGameState == STATE_CHAR_SELECT) { charSelectingPlayer =1; selectedPaletteP1 = -1; selectedPaletteP2 = -1; setupCharacterSelect(); }
 				}
+				// Start credit timer when entering credits
+				creditStartTime = (float)glfwGetTime();
 				return;
 			}
 
