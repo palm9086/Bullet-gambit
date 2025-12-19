@@ -750,56 +750,61 @@ void setupGameButtons() {
 	activeButtons.clear();
 
 	// Local modifiable variable to prevent "expression must be a modifiable lvalue" error
-	float currentMarginY = 0.05f;
-	float currentMarginX = 0.05f;
+	float currentMarginY =0.05f;
+	float currentMarginX =0.05f;
 
-	// 1. Action Buttons (Left/Right)
+	//1. Action Buttons (Left/Right)
 	unsigned int leftTex = (player1Turn ? safeButtonTex : foeButtonTex);
 	unsigned int rightTex = (player1Turn ? foeButtonTex : safeButtonTex);
-	glm::vec2 leftSize = getNormalizedSize(leftTex) * 2.0f;
-	glm::vec2 rightSize = getNormalizedSize(rightTex) * 2.0f;
+	glm::vec2 leftSize = getNormalizedSize(leftTex) *2.0f;
+	glm::vec2 rightSize = getNormalizedSize(rightTex) *2.0f;
 
-	float H_SPACING = 0.30f;
+	float H_SPACING =0.30f;
 	float totalWidth = leftSize.x + H_SPACING + rightSize.x;
-	float startX = (1.0f - totalWidth) / 2.0f;
+	float startX = (1.0f - totalWidth) /2.0f;
 	float maxH = std::max(leftSize.y, rightSize.y);
-	float btnY = (1.0f - maxH) / 2.0f;
+	float btnY = (1.0f - maxH) /2.0f;
 
-	activeButtons.push_back({ leftTex, glm::vec2(startX, btnY + (maxH - leftSize.y) / 2.0f), leftSize, STATE_GAME, true, (leftTex == safeButtonTex ? 2 : 1), glm::vec3(1.0f) });
-	activeButtons.push_back({ rightTex, glm::vec2(startX + leftSize.x + H_SPACING, btnY + (maxH - rightSize.y) / 2.0f), rightSize, STATE_GAME, true, (rightTex == safeButtonTex ? 2 : 1), glm::vec3(1.0f) });
+	activeButtons.push_back({ leftTex, glm::vec2(startX, btnY + (maxH - leftSize.y) /2.0f), leftSize, STATE_GAME, true, (leftTex == safeButtonTex ?2 :1), glm::vec3(1.0f) });
+	activeButtons.push_back({ rightTex, glm::vec2(startX + leftSize.x + H_SPACING, btnY + (maxH - rightSize.y) /2.0f), rightSize, STATE_GAME, true, (rightTex == safeButtonTex ?2 :1), glm::vec3(1.0f) });
 
 	// 2. Navigation Buttons
 	glm::vec2 backSize = getNormalizedSize(backButtonTex) * 2.0f;
 	activeButtons.push_back({ backButtonTex, glm::vec2(currentMarginX, 1.0f - currentMarginY - backSize.y), backSize, STATE_MENU, false, 3, glm::vec3(1.0f) });
 
+	// DESCRIPTION BUTTON (Top-right) - restore visibility and action
+	glm::vec2 descSize = getNormalizedSize(descriptionButtonTex) * 2.0f;
+	glm::vec2 descPos = glm::vec2(1.0f - currentMarginX - descSize.x, 1.0f - currentMarginY - descSize.y);
+	activeButtons.push_back({ descriptionButtonTex, descPos, descSize, STATE_GAME, false, 4, glm::vec3(1.0f) });
+
 	// 3. Item Slots with Symmetrical Offsets
-	float ITEM_SLOT_H = 0.133f; // Equivalent to 120.0f / 900.0f
-	float ITEM_SPACING = ITEM_SLOT_H * 0.4f;
+	float ITEM_SLOT_H =0.133f; // Equivalent to120.0f /900.0f
+	float ITEM_SPACING = ITEM_SLOT_H *0.4f;
 
 	// Symmetrical distance variables
-	float largeMove = 0.03f; // Outer slots (1 & 4)
-	float smallMove = 0.01f; // Inner slots (2 & 3)
+	float largeMove =0.03f; // Outer slots (1 &4)
+	float smallMove =0.01f; // Inner slots (2 &3)
 
-	std::array<glm::vec2, 4> slotSizes;
-	float totalSlotsWidth = 0.0f;
-	for (int i = 0; i < 4; ++i) {
-		slotSizes[i] = glm::vec2(ITEM_SLOT_H * 1.6f, ITEM_SLOT_H);
+	std::array<glm::vec2,4> slotSizes;
+	float totalSlotsWidth =0.0f;
+	for (int i =0; i <4; ++i) {
+		slotSizes[i] = glm::vec2(ITEM_SLOT_H *1.6f, ITEM_SLOT_H);
 		totalSlotsWidth += slotSizes[i].x;
 	}
-	totalSlotsWidth += ITEM_SPACING * 3.0f;
+	totalSlotsWidth += ITEM_SPACING *3.0f;
 
-	float cursorX = 0.5f - (totalSlotsWidth * 0.5f);
-	for (int i = 0; i < 4; ++i) {
-		unsigned int slotTex = (i == 0 ? slot1Tex : (i == 1 ? slot2Tex : (i == 2 ? slot3Tex : slot4Tex)));
+	float cursorX = 0.5f - (totalSlotsWidth *0.5f);
+	for (int i =0; i <4; ++i) {
+		unsigned int slotTex = (i ==0 ? slot1Tex : (i ==1 ? slot2Tex : (i ==2 ? slot3Tex : slot4Tex)));
 
 		// Apply symmetrical horizontal adjustments
 		float adjustedX = cursorX;
-		if (i == 0) adjustedX += largeMove; // Slot 1: move Right
-		if (i == 1) adjustedX += smallMove; // Slot 2: move Right a little
-		if (i == 2) adjustedX -= smallMove; // Slot 3: move Left a little
-		if (i == 3) adjustedX -= largeMove; // Slot 4: move Left
+		if (i ==0) adjustedX += largeMove; // Slot1: move Right
+		if (i ==1) adjustedX += smallMove; // Slot2: move Right a little
+		if (i ==2) adjustedX -= smallMove; // Slot3: move Left a little
+		if (i ==3) adjustedX -= largeMove; // Slot4: move Left
 
-		activeButtons.push_back({ slotTex, glm::vec2(adjustedX, currentMarginY), slotSizes[i], STATE_GAME, false, 10 + i, glm::vec3(1.0f), true });
+		activeButtons.push_back({ slotTex, glm::vec2(adjustedX, currentMarginY), slotSizes[i], STATE_GAME, false,10 + i, glm::vec3(1.0f), true });
 		cursorX += slotSizes[i].x + ITEM_SPACING;
 	}
 }
@@ -965,8 +970,19 @@ int main()
 		{
 			// Keep credits clear behavior (solid color) here; actual UI rendering for credit buttons moved to UI pass.
 			glDisable(GL_DEPTH_TEST);
-			glClearColor(0.0f, 0.0f, 0.3f, 1.0f);
+			glClearColor(0.0f,0.0f,0.3f,1.0f);
 			glClear(GL_COLOR_BUFFER_BIT);
+
+			// Ensure we always return to the main menu after all credit images have been shown.
+			// Defensive: set creditStartTime if it wasn't set by the transition code.
+			if (creditStartTime <=0.0f) creditStartTime = (float)glfwGetTime();
+			float totalElapsedCredits = (float)glfwGetTime() - creditStartTime;
+			const float totalCreditsDuration = CREDIT_IMAGE_DURATION *3.0f; //3 images
+			if (totalElapsedCredits >= totalCreditsDuration) {
+				setupMainMenu();
+				currentGameState = STATE_MENU;
+				creditStartTime = 0.0f;
+			}
 		}
 		else if (currentGameState == STATE_GAME)
 		{
@@ -1653,9 +1669,9 @@ int main()
 					renderQuad(0.0f,1.0f);
 				}
 
-				// Draw next image fading in
-				int nextIdx = (idx +1) %3;
-				if (alphaNext >0.0f && creditTextures[nextIdx] !=0) {
+				// Draw next image fading in - only if there is a next image (don't wrap from last to first)
+				int nextIdx = idx +1;
+				if (nextIdx <3 && alphaNext >0.0f && creditTextures[nextIdx] !=0) {
 					if (menuShader) menuShader->setFloat("alpha", alphaNext);
 					if (menuShader) menuShader->setVec2("offset", glm::vec2(0.0f,0.0f));
 					if (menuShader) menuShader->setVec2("scale", glm::vec2(1.0f,1.0f));
