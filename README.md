@@ -1,4 +1,4 @@
-<img width="1598" height="897" alt="image" src="https://github.com/user-attachments/assets/02b06071-52b8-4991-9026-bad7dcce74e2" /><img width="1598" height="897" alt="image" src="https://github.com/user-attachments/assets/f085f6ad-c3b1-429a-ae0d-7e53618873e5" /># Bullet-gambit
+# Bullet-gambit
 Bullet Gambit is a tense, stylized two-player duel that mixes classic Russian‑roulette risk with light tactical choices and whimsical presentation. Players sit across a virtual table, take turns, and decide whether to shoot themselves to get a item to improve your chance or shoot the opponent to end it quicker while a single bullet hides in a six-chamber cylinder. The game balances luck, timing, and limited item use to create short, dramatic rounds with clear visual feedback.
 
 ITCH.io LInk https://palm90864.itch.io/bullet-gambit
