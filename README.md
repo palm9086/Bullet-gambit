@@ -20,6 +20,15 @@ Chair Model : vUv https://sketchfab.com/vovaustimuk
 Player Model : ArcanaAeon https://sketchfab.com/AeonArcana
 
 
+
+https://github.com/user-attachments/assets/3dcc1898-38be-49ea-90d4-803a0f4549ab
+
+
 <img width="1600" height="900" alt="1" src="https://github.com/user-attachments/assets/58259369-0546-414e-8d4c-6455f2d48d96" />
 <img width="1600" height="900" alt="2" src="https://github.com/user-attachments/assets/649ad007-c004-4cf5-8a81-41896275e42f" />
 <img width="1600" height="900" alt="3" src="https://github.com/user-attachments/assets/e8f7393b-31bf-49b1-a2ec-39d8142bf220" />
+<img width="1596" height="887" alt="Screenshot 2025-12-19 071542" src="https://github.com/user-attachments/assets/cb40896f-2108-4735-95e6-7cd50721c88a" />
+<img width="1598" height="897" alt="Screenshot 2025-12-19 071417" src="https://github.com/user-attachments/assets/0f983ce4-b22d-4d7f-9a83-ac0c0bd8bd3a" />
+<img width="1591" height="893" alt="Screenshot 2025-12-19 072927" src="https://github.com/user-attachments/assets/1bd130da-d625-4566-b91a-9371848d28c6" />
+<img width="1592" height="892" alt="Screenshot 2025-12-19 072955" src="https://github.com/user-attachments/assets/3a589504-5f56-49ec-9a0a-6227ddcf7e57" />
+
